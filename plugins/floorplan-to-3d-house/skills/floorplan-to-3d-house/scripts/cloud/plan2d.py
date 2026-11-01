@@ -5,7 +5,9 @@ sys.path.insert(0, os.environ.get('EZDXF_SRC', 'ezdxf-src/src'))
 import ezdxf
 from ezdxf.enums import TextEntityAlignment
 from PIL import Image, ImageDraw, ImageFont
-L = json.load(open('site3d/layout.json')); site = json.load(open('site3d/site.json'))
+# LAYOUT_JSON: e.g. one storey written by storey_filter.py
+L = json.load(open(os.environ.get('LAYOUT_JSON', 'site3d/layout.json')))
+site = json.load(open('site3d/site.json'))
 OUT_DXF, OUT_PNG = sys.argv[1], sys.argv[2]
 P = lambda x, z: (x, -z)       # scene -> DXF plan (y north)
 
@@ -34,7 +36,7 @@ def wall_parts(w):
 
 png_items = []
 for w in L['walls']:
-    if w.get('y0', 0) > 1.5 or w.get('tag', '').startswith('C east above'): continue   # walls standing on a lower roof
+    if w.get('y0', 0) > L.get('meta', {}).get('storey_y', 0) + 1.5 or w.get('tag', '').startswith('C east above'): continue   # walls standing on a lower roof
     solid, ops = wall_parts(w)
     lay = 'A-WALL' if w['t'] > 0.2 else 'A-WALL-INT'
     for r in solid:

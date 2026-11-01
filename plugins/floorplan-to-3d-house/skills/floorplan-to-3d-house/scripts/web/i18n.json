@@ -52,7 +52,14 @@
   "hint": "Drag to orbit · right button to pan · wheel to zoom · try Walk or Drone",
   "credits": "Textures: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; sky: Poly Haven “Quarry 01” (CC0). Stone, timber slats, roof tiles and paving are procedural.",
   "m2": "m²",
-  "decimal": "."
+  "decimal": ".",
+  "l_storey": "Storey",
+  "storey_all": "All storeys",
+  "storey_names": [
+   "Ground floor",
+   "First floor",
+   "Second floor"
+  ]
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -107,6 +114,13 @@
   "hint": "Arrastar para rodar · botão direito para deslocar · roda para zoom · experimente Passeio ou Drone",
   "credits": "Texturas: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; céu: Poly Haven “Quarry 01” (CC0). Pedra, ripado, telha e pavimentos são gerados.",
   "m2": "m²",
-  "decimal": ","
+  "decimal": ",",
+  "l_storey": "Piso",
+  "storey_all": "Todos os pisos",
+  "storey_names": [
+   "Rés-do-chão",
+   "1.º andar",
+   "2.º andar"
+  ]
  }
 }

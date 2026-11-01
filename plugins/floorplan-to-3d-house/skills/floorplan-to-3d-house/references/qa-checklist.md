@@ -16,6 +16,9 @@ Automated by `scripts/cloud/validate_layout.py project.json --md export/qa.md`, 
 | WC area | ≥ 2.5 m² | error |
 | Corridor / hall width | ≥ 0.90 m | error |
 | Tree inside or against a building | n/a | error |
+| Headroom over each tread under the slab above | ≥ 2.0 m (`headroom_min`) | error |
+| Guard along void edges and upper terraces (railing or wall ≥ `guard_h`) | 1.0 m | warning |
+| Upper-floor glazing / doors with sill < `upper_sill_min` and no balcony or railing | 0.9 m | warning |
 
 ## Manual checks before showing anything
 - [ ] Scale validated against a known dimension or area.
@@ -23,6 +26,7 @@ Automated by `scripts/cloud/validate_layout.py project.json --md export/qa.md`, 
 - [ ] Walk test (`navtest.js`) passes; every room reachable; no furniture blocking a passage (< 0.8 m).
 - [ ] Terrain doesn't poke through any slab (inspect the interior cut-away and lower rooms).
 - [ ] Stairs show treads (screenshot from the bottom).
+- [ ] Two storeys: walk route climbs the stair; each storey shown with the selector; one plan per storey.
 - [ ] Doors on the camera path open in the Blender video.
 - [ ] Renders and PNGs looked at with Read before sending.
 - [ ] Address / GPS not visible on the published page unless the user asked.

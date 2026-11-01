@@ -1,0 +1,146 @@
+{
+ "name": "Example two-storey house",
+ "subtitle": "3-bedroom two-storey house with balcony (invented site, same plot as the main example)",
+ "eyebrow": "Site study \u00b7 two-storey example",
+ "lang": "en",
+ "location": {
+  "lat": 40.0,
+  "lon": null,
+  "address": null
+ },
+ "show_address_on_page": false,
+ "north_deg": 8.0,
+ "plan_scale": 200,
+ "area_limit": 285,
+ "setback_min": 3.0,
+ "views": {
+  "aerial": {
+   "pos": [
+    24,
+    22,
+    30
+   ],
+   "tgt": [
+    -4,
+    1.5,
+    -1
+   ]
+  },
+  "street": {
+   "pos": [
+    -20.5,
+    null,
+    -1.5
+   ],
+   "tgt": [
+    -9.5,
+    2.2,
+    -2.0
+   ]
+  },
+  "garden": {
+   "pos": [
+    10,
+    null,
+    16
+   ],
+   "tgt": [
+    -4,
+    2.5,
+    0
+   ]
+  },
+  "interior": {
+   "pos": [
+    -4,
+    22,
+    18
+   ],
+   "tgt": [
+    -4,
+    0,
+    -1
+   ]
+  },
+  "top": {
+   "pos": [
+    -3,
+    80,
+    0.01
+   ],
+   "tgt": [
+    -3,
+    0,
+    0
+   ]
+  }
+ },
+ "walk_spawn": [
+  -17.2,
+  -3.0
+ ],
+ "garden_lights": [
+  [
+   -13.0,
+   -6.4
+  ],
+  [
+   -9.0,
+   -6.4
+  ],
+  [
+   -5.0,
+   -6.4
+  ],
+  [
+   -1.2,
+   -6.4
+  ],
+  [
+   -14.0,
+   -8.0
+  ],
+  [
+   -1.0,
+   8.0
+  ],
+  [
+   2.6,
+   4.0
+  ]
+ ],
+ "level_labels": [
+  [
+   "Ground floor 32.00",
+   -4.2,
+   0.1,
+   1.0
+  ],
+  [
+   "First floor 34.95",
+   -4.2,
+   3.05,
+   1.0
+  ]
+ ],
+ "notes": [
+  [
+   "Invented site:",
+   "synthetic survey used to demonstrate the workflow."
+  ],
+  [
+   "Two storeys:",
+   "stair void with balustrade, balcony on the first floor; use the Storey selector to see each floor."
+  ],
+  [
+   "To check with your architect:",
+   "local planning rules, setbacks, structure, stair and guard-rail rules."
+  ]
+ ],
+ "style": "white-minimal",
+ "blender": {
+  "project_dir": "C:/Users/<you>/Videos/<Project>",
+  "gpu": "OPTIX",
+  "seconds_per_frame_measured": null
+ }
+}

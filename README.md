@@ -1,3 +1,5 @@
+![floorplan-to-3d-house](assets/banner.png)
+
 # floorplan-to-3d-house
 
 A **Claude plugin** (Cowork and Claude Code) that turns a house **site plan or floor plan** (vector PDF or DXF) into:
@@ -6,11 +8,13 @@ A **Claude plugin** (Cowork and Claude Code) that turns a house **site plan or f
 - a **simplified 2D plan for approval**;
 - an **interactive 3D model** with Orbit / Walk / Drone navigation and a sun study;
 - **GLB / 3D-DXF exports** and reference renders;
+- **elevations and a section** (PNG + DXF) and a **sun & daylight report** per room;
 - an optional **Blender drone or walkthrough video**.
+
+One or two storeys (stair voids, balustrades, balconies, storey selector) and **style presets** picked from your reference photos (white minimal, rural stone, Nordic timber, Portuguese contemporary).
 
 > Indicative proposals only, not for construction or permit applications.
 
-![icon](plugins/floorplan-to-3d-house/.claude-plugin/icon.png)
 
 ## Install
 
@@ -32,7 +36,7 @@ On older versions:
 | Command | What it does |
 |---|---|
 | `/floorplan-to-3d-house` | Full workflow: intake (optional style photos and location) → DXF → 2D plan **approval gate** → 3D page → exports → optional video |
-| `/validate-plan` | Design QA (setbacks, stairs, doors, room sizes, area cap) and a regenerated 2D approval plan |
+| `/validate-plan` | Design QA (setbacks, stairs, headroom, guards, doors, room sizes, area cap) and regenerated 2D approval plans, one per storey |
 | `/drone-video` | Blender video (15 / 30 / 60 s, walkthrough with doors opening) for an approved project |
 
 Full documentation: [plugins/floorplan-to-3d-house/README.md](plugins/floorplan-to-3d-house/README.md).
@@ -40,7 +44,8 @@ Full documentation: [plugins/floorplan-to-3d-house/README.md](plugins/floorplan-
 ## Repository layout
 ```
 .claude-plugin/marketplace.json     marketplace catalogue (this repo is a one-plugin marketplace)
-plugins/floorplan-to-3d-house/      the plugin: manifest, 3 skills, scripts, CC0 textures, example, docs
+plugins/floorplan-to-3d-house/      the plugin: manifest, 3 skills, scripts, CC0 textures, examples, docs
+assets/                             icon (SVG/PNG) and banner
 ```
 
 ## License

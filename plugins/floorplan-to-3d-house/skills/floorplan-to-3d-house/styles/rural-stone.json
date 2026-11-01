@@ -1,0 +1,48 @@
+{
+ "name": "Rural stone",
+ "description": "Terracotta tile roof, warm grey-brown rubble stone, cream render, brown timber frames and doors.",
+ "roof_tile": "terracotta",
+ "pitch_hint": 28,
+ "tint": {
+  "stone": [
+   0.86,
+   0.8,
+   0.7
+  ],
+  "render": [
+   1.0,
+   0.96,
+   0.88
+  ],
+  "frame": [
+   2.7,
+   1.8,
+   1.15
+  ],
+  "slats": [
+   0.78,
+   0.68,
+   0.58
+  ],
+  "garage": [
+   0.78,
+   0.68,
+   0.58
+  ],
+  "front": [
+   0.9,
+   0.8,
+   0.7
+  ],
+  "terrace": [
+   0.96,
+   0.9,
+   0.82
+  ],
+  "retain": [
+   0.86,
+   0.8,
+   0.7
+  ]
+ }
+}

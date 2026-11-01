@@ -62,6 +62,13 @@ for k, v in fill.items():
 assert '{{' not in t, 'unfilled placeholder: ' + t[t.index('{{'):t.index('{{') + 40]
 eng = open(os.path.join(WEB, 'engine.js'), encoding='utf-8').read()
 proj_js = dict(P); proj_js['ui'] = S                       # engine reads PROJ.ui.show / hide / load_fail
+st = P.get('style')                                         # preset name (styles/<name>.json) or an inline style object
+if isinstance(st, str):
+    sp = os.path.normpath(os.path.join(HERE, '..', '..', 'styles', st + '.json'))
+    proj_js['style_data'] = json.load(open(sp, encoding='utf-8')) if os.path.exists(sp) else {}
+    if not os.path.exists(sp): print('warning: style preset not found:', st)
+elif isinstance(st, dict):
+    proj_js['style_data'] = st
 proj_js.get('location', {}).pop('address', None)           # never embed the address in the page code
 eng = (eng.replace('__SITE_JSON__', json.dumps(site, separators=(',', ':')))
           .replace('__LAYOUT_JSON__', json.dumps(lay, separators=(',', ':')))

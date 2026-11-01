@@ -16,10 +16,10 @@ if os.environ.get('PROJECT_JSON'):                      # project.json values wi
         if _p.get(k) is not None: meta[k] = _p[k]
     if _p.get('plan_title'): meta['title'] = _p['plan_title']
 _lang = (_p.get('lang') if os.environ.get('PROJECT_JSON') else None) or 'en'
-TX = {'en': dict(up='up', road='ROAD', ceded='ceded strip', title='Simplified 2D plan — for approval before 3D', cols=('Volume', 'Level', 'Area (m²)'), total='Total', limit='limit',
+TX = {'en': dict(up='up', down='down', road='ROAD', ceded='ceded strip', title='Simplified 2D plan — for approval before 3D', cols=('Volume', 'Level', 'Area (m²)'), total='Total', limit='limit',
                  legend=('exterior wall', 'interior wall', 'window / glazing', 'door (swing) / garage door (dashed)', 'plot boundary', 'setback to boundary', 'setback below minimum', '▽ floor level', 'ceded to public domain'),
                  plot='Plot', disclaimer='Indicative proposal — not for construction or permit', dec='.'),
-      'pt-PT': dict(up='sobe', road='ESTRADA', ceded='cedência', title='Plano 2D simplificado — para aprovação antes do 3D', cols=('Volume', 'Nível', 'Área (m²)'), total='Total', limit='limite',
+      'pt-PT': dict(up='sobe', down='desce', road='ESTRADA', ceded='cedência', title='Plano 2D simplificado — para aprovação antes do 3D', cols=('Volume', 'Nível', 'Área (m²)'), total='Total', limit='limite',
                  legend=('parede exterior', 'parede interior', 'janela / envidraçado', 'porta (arco) / portão (tracejado)', 'limite do terreno', 'afastamento ao limite', 'afastamento abaixo do mínimo', '▽ cota do pavimento', 'cedência ao domínio público'),
                  plot='Terreno', disclaimer='Proposta indicativa — sem valor de projeto', dec=',')}[_lang if _lang in ('en', 'pt-PT') else 'en']
 north = meta.get('north_deg', site.get('meta', {}).get('north_deg', 0.0))
@@ -116,7 +116,7 @@ for b in L['blocks'].values():
 # walls + openings
 doors = []
 for w in L['walls']:
-    if w.get('tag', '').startswith('C east above') or w.get('y0', 0) > 1.5: continue
+    if w.get('tag', '').startswith('C east above') or w.get('y0', 0) > L.get('meta', {}).get('storey_y', 0) + 1.5: continue
     solid, ops = wall_parts(w)
     col = (25, 25, 25) if w['t'] > 0.2 else (70, 70, 70)
     for r in solid: d.polygon([Q(*p) for p in r], fill=col)
@@ -151,13 +151,17 @@ for st in L.get('stairs', []):
     for i in range(st['n'] + 1):
         x = st['x0'] + (st['x1'] - st['x0']) * i / st['n']; d.line([Q(x, st['z0']), Q(x, st['z1'])], fill=(80, 80, 80), width=2)
     zm = (st['z0'] + st['z1']) / 2
-    b0, b1 = block_at(st['x0'] - 0.3, zm), block_at(st['x1'] + 0.3, zm)
-    up_west = (b0 or {}).get('level', 0) >= (b1 or {}).get('level', 0)
-    xa, xb = (st['x1'] - 0.15, st['x0'] + 0.15) if up_west else (st['x0'] + 0.15, st['x1'] - 0.15)
+    sgn = 1 if st['x1'] >= st['x0'] else -1                      # schema: the top of the run is at x0
+    down = int(st.get('storey', 0)) != int(meta.get('storey', st.get('storey', 0)))   # upper plan of a two-storey house
+    xa, xb = (st['x0'] + 0.15 * sgn, st['x1'] - 0.15 * sgn) if down else (st['x1'] - 0.15 * sgn, st['x0'] + 0.15 * sgn)
     d.line([Q(xa, zm), Q(xb, zm)], fill=(200, 0, 0), width=3)
-    hx, hy = Q(xb, zm); dx = -1 if up_west else 1
+    hx, hy = Q(xb, zm); dx = 1 if xb > xa else -1
     d.polygon([(hx, hy), (hx - dx * 14, hy - 8), (hx - dx * 14, hy + 8)], fill=(200, 0, 0))
-    d.text(Q((xa + xb) / 2, max(st['z0'], st['z1']) + 0.3), TX['up'], fill=(200, 0, 0), font=F_SMALL, anchor='mm')
+    if down: d.text(Q(st['x0'] - 0.25 * sgn, zm), TX['down'], fill=(200, 0, 0), font=F_SMALL, anchor='rm' if sgn > 0 else 'lm')   # at the top step
+    else: d.text(Q((xa + xb) / 2, max(st['z0'], st['z1']) + 0.3), TX['up'], fill=(200, 0, 0), font=F_SMALL, anchor='mm')
+# railings / balustrades (two-storey: void edges, balconies)
+for r in L.get('railings', []):
+    d.line([Q(*r['a']), Q(*r['b'])], fill=(90, 90, 90), width=4); d.line([Q(*r['a']), Q(*r['b'])], fill=(235, 235, 235), width=1)
 
 # plot outline
 pp = [Q(*p) for p in plot + [plot[0]]]; dashed(pp, (210, 0, 0), 4, 22, 8)
@@ -248,7 +252,7 @@ d.text((sx0 + 20 * S + 12, sy0 + 6), 'm', fill=(20, 20, 20), font=F_SMALL, ancho
 # title + area table
 y = H - TABLE_H + 18
 d.line([(0, H - TABLE_H), (W, H - TABLE_H)], fill=(180, 180, 180), width=2)
-d.text((40, y), meta.get('title', TX['title']), fill=(0, 0, 0), font=F_TITLE)
+d.text((40, y), meta.get('title', TX['title']) + (' — ' + meta['storey_label'] if meta.get('storey_label') else ''), fill=(0, 0, 0), font=F_TITLE)
 y += 46
 cols = (40, 560, 760)
 for i, h in enumerate(TX['cols']): d.text((cols[i], y), h, fill=(90, 90, 90), font=F_ROOM)

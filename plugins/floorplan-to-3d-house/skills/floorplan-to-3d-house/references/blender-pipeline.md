@@ -23,6 +23,7 @@ Requirements:
    - physical sky + sun;
    - interior lights;
    - surrounding terrain from the spot heights;
+   - style (`style.py`: only when `params.json` has `"restyle"`, see style-guide.md);
    - haze;
    - final settings.
 4. **Camera path:**

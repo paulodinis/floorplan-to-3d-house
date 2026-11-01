@@ -16,10 +16,10 @@ const { chromium } = require('playwright');
     if (u.startsWith('http://local/')) return route.fulfill({ path: S + '/site3d/' + page_, contentType: 'text/html' });
     return route.continue();
   });
-  await page.goto('http://local/x.html');
+  await page.goto('http://local/x.html', { waitUntil: 'domcontentloaded', timeout: 300000 });
   await page.waitForFunction(() => window.__ready && document.getElementById('loading').hidden, null, { timeout: 400000 });
   for (const sh of shots) {
-    for (const a of (sh.actions || [])) await page.click(a);
+    for (const a of (sh.actions || [])) { if (a.startsWith('js:')) await page.evaluate(a.slice(3)); else await page.click(a); }   // 'js:window.__storey("0")'
     await page.waitForTimeout(sh.wait || 2500);
     await page.screenshot({ path: S + '/' + sh.out, timeout: 400000 });
     console.log('shot', sh.out);

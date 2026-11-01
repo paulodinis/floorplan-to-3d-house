@@ -9,7 +9,8 @@ Turn a house **site plan or floor plan** (vector PDF or DXF) into:
    - sun study by date and hour;
    - areas panel;
 4. **exports**: GLB (glTF), a 3D DXF (one layer per material) and five reference renders, plus a prompt pack for AI image and video tools;
-5. optionally, a **photoreal drone video** rendered on your own machine with Blender (Cycles), including a walkthrough with doors opening.
+5. **elevations and a section** (PNG sheet + DXF) and a **sun & daylight report**: direct-sun hours per room and ground sun maps for the equinox and both solstices;
+6. optionally, a **photoreal drone video** rendered on your own machine with Blender (Cycles), including a walkthrough with doors opening.
 
 It works as a conversation: Claude asks a few questions, shows the 2D plan, waits for your **approval**, and only then builds the 3D and the video.
 
@@ -47,7 +48,7 @@ Put the plugin in `plugins/floorplan-to-3d-house/` and add `.claude-plugin/marke
   "owner": { "name": "Paulo Silva" },
   "plugins": [
     { "name": "floorplan-to-3d-house", "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.0.0" }
+      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.1.0" }
   ]
 }
 ```
@@ -67,7 +68,7 @@ The `drone-video` skill checks that the Blender tools are available before doing
 
 Claude will ask:
 - faithful or redesign;
-- number of storeys;
+- number of storeys (one, split levels or two);
 - 1–2 optional photos (style references and/or the site);
 - an optional address or GPS point. It is used only for the sun, the climate and vegetation, and to check north. It is never put on the published page unless you ask.
 
@@ -78,7 +79,9 @@ Claude will ask:
 | 3D page (Claude artifact) | interactive model, private until you share it |
 | `<name>.glb`, `<name>_3d.dxf` | 3D model for Blender, SketchUp, D5, Twinmotion, Lumion, CAD |
 | `render_*.png`, `PROMPT.txt` | references for AI image/video tools |
-| `qa.md` | layout checks: setbacks, stairs, doors, room sizes, area cap |
+| `qa.md` | layout checks: setbacks, stairs, doors, room sizes, area cap, headroom and guards |
+| `elevations.png`, `elevations.dxf` | four elevations + section through the stair |
+| `sun_report.md`, `sun_ground.png` | direct-sun hours per room, ground sun maps |
 | `*.mp4` | Blender drone video (optional) |
 
 ## Try the example
@@ -95,8 +98,10 @@ node <skill>/scripts/cloud/navtest.js                                       # wa
 ```
 The example is an **invented** plot (synthetic survey) with a 3-bedroom single-storey house on two levels, a garage and a workshop. Expected QA: 0 errors, 1 warning.
 
+`examples/two-storey/` uses the same site with a two-storey house (stair void, glass balustrade, balcony): run `python3 <skill>/examples/two-storey/layout_generator_two_storey.py` in a work dir that holds `site3d/site.json`, then use its `project.json`. Expected QA: 0 errors, 0 warnings.
+
 ## Limitations (honest list)
-- **Storeys:** one storey plus split levels are fully supported. Two or more storeys only through an interim workaround; see `references/multi-storey.md`.
+- **Storeys:** one storey with split levels, or two storeys (voids, railings, balconies, storey selector, per-storey plans). Three or more are untested. Stairs are straight runs along x, and roofs are hip-only; see `references/multi-storey.md`.
 - **Drawings:**
   - vector PDFs work best; scanned images need tracing;
   - DWG must be exported to DXF first.
@@ -112,12 +117,10 @@ Addresses, GPS points and site photos identify a home. The skill asks before usi
 
 ## Roadmap
 See `CHANGELOG.md` and `references/multi-storey.md`.
-- Multi-storey schema.
-- Style presets as data (`style.json`).
-- Elevations and sections.
+- L/U stairs and stairs along z; flat roofs and roof terraces.
 - IFC export.
-- Per-room daylight hours.
 - Free road orientation.
+- Blender camera paths per storey and a dollhouse cut-away.
 
 Contributions welcome.
 

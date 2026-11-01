@@ -1,0 +1,53 @@
+{
+ "name": "Nordic timber",
+ "description": "Dark grey render, dark-stained timber cladding, grey stone, black frames and roof.",
+ "roof_tile": "flat_dark",
+ "pitch_hint": 30,
+ "tint": {
+  "render": [
+   0.42,
+   0.43,
+   0.45
+  ],
+  "slats": [
+   0.52,
+   0.48,
+   0.44
+  ],
+  "garage": [
+   0.52,
+   0.48,
+   0.44
+  ],
+  "stone": [
+   0.78,
+   0.79,
+   0.82
+  ],
+  "frame": [
+   0.55,
+   0.55,
+   0.55
+  ],
+  "roof": [
+   0.7,
+   0.7,
+   0.72
+  ],
+  "soffit": [
+   0.5,
+   0.5,
+   0.52
+  ],
+  "front": [
+   1.4,
+   1.2,
+   1.0
+  ],
+  "terrace": [
+   0.85,
+   0.86,
+   0.88
+  ]
+ }
+}

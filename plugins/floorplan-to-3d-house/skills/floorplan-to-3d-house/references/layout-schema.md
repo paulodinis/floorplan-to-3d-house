@@ -23,8 +23,11 @@ Units are metres. Scene axes: **x east, z south** (sheet axes), **y up**, with y
 | `furniture` | `[{b: rect, y0, h, mat, name}]` | Boxes. Names containing sofa, rug, coffee table or lounger get special treatment. |
 | `slats` | `[{x0, x1, z0, z1, y0, y1}]` | Timber slat panels on façades. |
 | `room_lights` | `[[x, z, y]]` | Interior lights. |
+| `railings` | `[{a, b, y, h, storey}]` | Glass balustrades (`h` default 1.0) on void edges and balconies. Count as guards in the QA and block walk mode. |
+| `*.storey` | integer | Any wall, floor, room, block, roof, stair, slat, column, furniture item or railing; 0 = ground (default). Drives the storey selector, per-storey plans and the QA. |
+| `floors[].holes` | `[polygon]` | Voids cut out of a slab (stair void, double height). |
 
 ## Known geometric assumptions (roadmap)
 - The road / main access is on the **west** side (`cut_x`, gates on the west line). Other orientations: rotate the scene so the road is west, or generalise `cut_x`.
 - Terraces and retaining walls run along x; stairs run along x.
-- One upper level plus lower split levels (see multi-storey.md).
+- Stairs run along x (top at `x0`). Two storeys are supported (see multi-storey.md); the roof generator is hip-only.

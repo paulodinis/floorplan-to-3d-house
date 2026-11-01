@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0 (2026-11-01)
+- **Elevations & section:** `elevations.py` draws the four elevations (titled by true bearing, with level / eave / ridge marks, finished and natural ground) and a section through the stair. Output: PNG per view, one sheet and a layered DXF.
+- **Style presets:**
+  - `styles/` holds `portuguese-contemporary`, `white-minimal`, `rural-stone` (terracotta roof) and `nordic-timber`;
+  - `project.json "style"` takes a preset name or an inline object;
+  - `style_from_colors.py` turns colours sampled from style photos into a preset;
+  - the GLB carries the style into Blender; an optional `restyle` pass handles older GLBs.
+- **Sun & daylight report:** `sun_report.py` computes direct-sun hours per room through its exterior glazing on 21 Mar / 21 Jun / 21 Dec, with occlusion by walls, roofs, the designed ground and trees. It writes ground sun-hour maps and flags rooms with little winter sun or long summer sun on west glazing.
+- **Two storeys:**
+  - schema: `storey` on any element, `floors[].holes` for stair voids, `railings` and balconies;
+  - 3D page: storey selector (cut-away), walk mode across storeys, glass balustrades;
+  - per-storey plans: `storey_filter.py`, with a "down" arrow on upper plans;
+  - QA: headroom over the stair, guards at voids and upper terraces, low glazing upstairs;
+  - new example: `examples/two-storey/`.
+- **Tests:**
+  - `navtest.js` takes a route file (`NAV_ROUTE`);
+  - `shot2.js` accepts `js:` actions;
+  - page loads tolerate slow machines.
+- New icon and GitHub banner.
+
 ## 1.0.0 (2026-11-01): first community release
 - Packaged as a Claude plugin with three skills: `floorplan-to-3d-house` (full workflow), `validate-plan` (QA + 2D plan) and `drone-video` (Blender video).
 - Self-contained package: scripts, web engine, CC0 textures (Poly Haven), Blender passes, and an invented reference example (synthetic site).

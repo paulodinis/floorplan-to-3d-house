@@ -5,9 +5,10 @@ description: >
   "make a 3D model of my house", "convert this plan to DXF", "redesign this house on my plot",
   "show me the house in 3D", "walk through the house", "export the plan to GLB" or "make a drone video of the house",
   or types /floorplan-to-3d-house. Runs the full workflow: DXF, simplified 2D plan for approval, interactive 3D page,
-  GLB/3D-DXF exports and reference renders, optional Blender video.
+  GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, optional Blender video.
+  Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Floor plan → DXF → 2D plan (approval) → 3D model → video
@@ -37,6 +38,10 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `masks2.py`: ground masks from the layout
   - `plan2d.py`: plan DXF
   - `plan2d_simple.py`: plan PNG for approval, with setbacks, levels, north and area table
+  - `storey_filter.py`: one storey's layout, for per-storey plans
+  - `elevations.py`: 4 elevations + a section through the stair (PNG sheet + DXF)
+  - `sun_report.py`: direct-sun hours per room and ground sun maps (equinox, both solstices)
+  - `style_from_colors.py`: colours sampled from style photos → style preset
   - `validate_layout.py`: design QA
   - `build_page.py`: builds the 3D page
   - `navtest.js`: walk-collision test
@@ -46,8 +51,9 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `gaps.py`: openings detection, faithful mode
   - `tex.py`: procedural textures
 - `scripts/web/`: `template.html`, `engine.js` (three.js r160, Orbit/Walk/Drone navigation, sun study), `export_glb.js`, `i18n.json`, `tex/`.
-- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `haze.py`, `final.py`, `encode.py`).
-- `examples/`: a complete reference project with `project.json`, `site.json`, `layout.json`, masks and `layout_generator_example.py`. Run it once to see the expected outputs.
+- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `style.py`, `haze.py`, `final.py`, `encode.py`).
+- `styles/`: style presets (`portuguese-contemporary`, `white-minimal`, `rural-stone`, `nordic-timber`).
+- `examples/`: a complete reference project with `project.json`, `site.json`, `layout.json`, masks and `layout_generator_example.py`. Run it once to see the expected outputs. `examples/two-storey/` is the same site with a two-storey house (stair void, railings, balcony).
 - `references/`: read these when the step needs them.
   - `intake.md`: question bank
   - `layout-schema.md`
@@ -59,9 +65,9 @@ Paths below are relative to this skill's base directory (shown when the skill lo
 ## Step 0. Intake
 Use AskUserQuestion: up to 4 questions per call, only what changes the result. Exact wording and options are in `references/intake.md`.
 1. **Faithful or redesign?** If redesign, ask for the programme (bedrooms, office, garage…), a floor-area cap, and how to handle the slope; two levels is a good default.
-2. **Storeys.** One / one with split levels / two or more.
-   - Full support today covers one storey plus split levels.
-   - For 2+ storeys, explain the limitation and offer the interim approach from `references/multi-storey.md`, or a single-storey study.
+2. **Storeys.** One / one with split levels / two.
+   - Two storeys are supported: `storey` on each element, slab voids, railings, balconies, a storey selector, one plan per storey (`references/multi-storey.md`).
+   - Three or more: the schema allows it but only two are tested; say so.
 3. **Photos (optional, 1–2).** Reference images of the style they want, and/or photos of the site: street view of the plot, existing trees, neighbours, boundary walls. Style photos drive the materials (`references/style-guide.md`). Site photos validate trees, walls, terrain and the road.
 4. **Location (optional).** Address or GPS point, with consent.
    - Latitude drives the sun study and the video lighting.
@@ -69,7 +75,7 @@ Use AskUserQuestion: up to 4 questions per call, only what changes the result. E
    - The location can confirm north and the road side, but north still comes from the drawing.
    - The address never goes on the page unless the user asks.
 
-Don't ask about style when style photos were given. Without photos, use the bundled "Portuguese contemporary" preset described in `references/style-guide.md`, and say so.
+Don't ask about style when style photos were given: pick the nearest preset in `styles/`, or derive one with `style_from_colors.py`, and set `"style"` in project.json (`references/style-guide.md`). Without photos, use `portuguese-contemporary`, and say so; offer the other presets in one line.
 
 ## Step 1. Workspace and inputs
 Run `bash <skill>/scripts/setup_workspace.sh` in a new project work dir. Write `project.json` from `examples/project.json`: name, `lang`, location, `north_deg`, `plan_scale`, `area_limit`, `setback_min`, notes and views.
@@ -104,6 +110,8 @@ Run, in order:
 2. `python3 scripts/cloud/plan2d.py export/plan.dxf /tmp/x.png` writes the DXF with layers A-WALL, A-GLAZ, A-DOOR, A-ROOM…
 3. `python3 scripts/cloud/plan2d_simple.py site3d/layout.json site3d/site.json export/plan_v<n>.png export/plan.dxf site3d/tex/mask1.png` writes the approval PNG and adds setback dimensions and north to the DXF.
 
+Two storeys: run steps 2–3 once per storey after `python3 scripts/cloud/storey_filter.py site3d/layout.json <k> site3d/layout_s<k>.json --label "<name>"` (`LAYOUT_JSON=site3d/layout_s<k>.json` for plan2d.py). See `references/multi-storey.md`.
+
 Look at the PNG with Read before showing it: labels, door swings, setbacks.
 
 ## Step 5. Approval gate (mandatory stop)
@@ -126,8 +134,8 @@ On "Change": update the layout, bump `v<n>`, rerun QA and repeat. Never take a c
 1. `python3 scripts/cloud/masks2.py`, then `plan2d.py ... ground` → `site3d/tex/plan_v2.jpg`.
 2. `python3 scripts/cloud/build_page.py project.json` → `site3d/publish.html` (and `page.html` for tests).
 3. Test:
-   - `node scripts/cloud/navtest.js` walks the route gate → door → corridor → stair → living → terrace → garden. Edit the waypoints for each project.
-   - `node scripts/cloud/shot2.js '[{"actions":["#v-street"],"out":"tmp/s.png"}]'`.
+   - `NAV_ROUTE=route.json node scripts/cloud/navtest.js` walks a route of `[x, z, "label"]` waypoints (gate → door → corridor → stair → rooms → terrace → garden; up the stair on two storeys). Without `NAV_ROUTE` it runs the example's route.
+   - `node scripts/cloud/shot2.js '[{"actions":["#v-street"],"out":"tmp/s.png"}]'`. Actions are CSS selectors to click, or `js:<code>` (for example `js:window.__storey("0")`).
    - Chromium flags: `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, about 3 min per shot.
 4. Publish `site3d/publish.html` and every file in `site3d/tex/` with the Artifact tool. It must be a full `<!DOCTYPE html>` document. `.hdr` is not served, so the sky ships as base64 in `sky.txt`. Republish to the same link.
 
@@ -136,13 +144,15 @@ On "Change": update the layout, bump `v<n>`, rerun QA and repeat. Never take a c
 2. `MODEL_NAME=<name> node scripts/cloud/export.js x export glb` → GLB + `tris.json`.
 3. `... renders` → 5 views at 1920×1080.
 4. `python3 scripts/cloud/tris2dxf.py export/tris.json export/<name>_3d.dxf <ezdxf/src>` writes one layer per material, Z = real level.
+5. `PROJECT_JSON=project.json python3 scripts/cloud/elevations.py export/elevations` → four elevations (titled by true bearing), a section through the stair, `elevations.png` and `elevations.dxf`. Look at the sheet before sending.
+6. **Sun & daylight** (needs `location.lat`; ask for it, or use the region's latitude and say so): `PROJECT_JSON=project.json python3 scripts/cloud/sun_report.py export/sun` → `sun_report.md` (direct-sun hours per room through its exterior glazing on 21 Mar / 21 Jun / 21 Dec, solar time) and `sun_ground.png`. Present the 2–3 points it flags (rooms with < 2 h in winter, west glazing with long summer sun) and its limits: clear sky, neighbours not modelled, not an energy or daylight-factor calculation.
 
 Zip:
 - the GLB, the 3D DXF, the plan DXF + PNG;
 - the renders;
 - `PROMPT.txt`, in English plus the user's language: style prompt, negative prompt, per-view hints, video prompt;
 - `README.txt`: units and axes, measured vs proposed, credits;
-- the QA report.
+- the QA report, the elevations sheet + DXF and the sun report.
 
 Explain that AI video tools don't take GLB and don't keep dimensions. Use the renders or the video as references.
 
@@ -176,4 +186,6 @@ See `references/blender-pipeline.md`.
   - Set `media_type='VIDEO'` before choosing FFMPEG.
   - `read_homefile(use_empty=True)` instead of the factory reset.
 - **Asphalt:** the asphalt mesh edge is saw-toothed (raster origin). Keep low cameras off that edge, or rebuild the road polygon.
-- **Engine geometry:** `engine.js` assumes stairs run along x and that terraces and retaining walls are x-lines. See the roadmap in `references/multi-storey.md` and `references/layout-schema.md`.
+- **Engine geometry:** `engine.js` assumes stairs run along x (top at `x0`) and that terraces and retaining walls are x-lines. Roofs are hip-only. See the roadmap in `references/multi-storey.md` and `references/layout-schema.md`.
+- **Comments in one-line edits:** when patching a Python line, never append a `# comment` before a `;`-joined statement: the statement becomes part of the comment.
+- **Style:** the GLB carries the page's style. Don't also run the Blender `restyle` pass on it, or the tint applies twice.

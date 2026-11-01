@@ -1,0 +1,7 @@
+{
+ "name": "Portuguese contemporary",
+ "description": "Low hipped dark flat-tile roof, white render, warm limestone, warm timber slats, anthracite frames (the default look).",
+ "roof_tile": "flat_dark",
+ "pitch_hint": 16,
+ "tint": {}
+}

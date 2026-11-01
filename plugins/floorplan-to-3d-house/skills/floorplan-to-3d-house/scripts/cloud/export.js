@@ -22,7 +22,7 @@ const fs = require('fs');
     if (u.startsWith('http://local/')) return route.fulfill({ path: S + '/site3d/export.html', contentType: 'text/html' });
     return route.continue();
   });
-  await page.goto('http://local/export.html');
+  await page.goto('http://local/export.html', { waitUntil: 'domcontentloaded', timeout: 300000 });
   await page.waitForFunction(() => window.__ready && document.getElementById('loading').hidden, null, { timeout: 300000 });
   await page.waitForTimeout(1000);
   await page.evaluate(() => window.__stop());

@@ -466,6 +466,21 @@ const M = {
   olive: [0x66744d, 0x727f55, 0x5d6a46].map((c, i) => { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.92, flatShading: true }); m.name = 'Olive_Foliage'; return m; }),
   bollard: (() => { const m = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, emissive: 0xffc77a, emissiveIntensity: 0, roughness: 0.5 }); m.name = 'Garden_Light'; return m; })(),
 };
+// ---------- style preset (project.json "style" → PROJ.style_data, see references/style-guide.md) ----------
+// tint: per-material RGB multipliers on the default look (1 = unchanged, > 1 lightens); roof_tile: flat_dark | terracotta
+{
+  const ST = PROJ.style_data || {};
+  if (ST.roof_tile === 'terracotta') {
+    const m = tileTex.clone(); m.needsUpdate = true; const [w, h] = Array.isArray(tileTex.userData.metres) ? tileTex.userData.metres : [tileTex.userData.metres, tileTex.userData.metres];
+    m.repeat.set(1 / w, 1 / h); M.roof.map = m; M.roof.name = 'Roof_Tile_Terracotta';
+    const n = tileNrm.clone(); n.needsUpdate = true; const [nw, nh] = tileNrm.userData.metres; n.repeat.set(1 / nw, 1 / nh); M.roof.normalMap = n;
+    M.ridge.color.set(0x9a4a2e); M.roof.needsUpdate = true;
+  }
+  for (const [k, t] of Object.entries(ST.tint || {})) {
+    const m = M[k]; if (!m || Array.isArray(m) || !Array.isArray(t)) continue;
+    m.color.setRGB(m.color.r * t[0], m.color.g * t[1], m.color.b * t[2]);
+  }
+}
 
 // metre-UV box (local frame), so textures run continuously along walls
 function mbox(x0, x1, y0, y1, z0, z1, uOff = 0) {
@@ -480,6 +495,14 @@ function mbox(x0, x1, y0, y1, z0, z1, uOff = 0) {
   return g;
 }
 const house = new THREE.Group(), roofs = new THREE.Group(), furniture = new THREE.Group(), site = new THREE.Group();
+// ---------- storeys: any wall, floor, stair, slat, column, railing or furniture item may carry "storey" (0 = ground, default) ----------
+const STOREYS = new Map();
+function sg(o, parent = house) {
+  const k = o.storey || 0, key = parent.uuid + ':' + k;
+  if (!STOREYS.has(key)) { const g = new THREE.Group(); g.name = 'storey_' + k; g.userData.storey = k; parent.add(g); STOREYS.set(key, g); }
+  return STOREYS.get(key);
+}
+const MAX_STOREY = Math.max(0, ...[...LAY.walls, ...LAY.floors].map(o => o.storey || 0));
 scene.add(house, roofs, furniture, site);
 function addMesh(parent, geo, m, cast = true, recv = true) { const o = new THREE.Mesh(geo, m); o.castShadow = cast; o.receiveShadow = recv; parent.add(o); return o; }
 
@@ -515,28 +538,41 @@ function buildWall(w) {
     cur = e;
   }
   solid(cur, Lw, y0, y1);
-  house.add(g);
+  sg(w).add(g);
 }
 LAY.walls.forEach(buildWall);
 // slatted timber panels flanking the front door (as in the reference image)
 {
-  for (const s of (LAY.slats || [])) addMesh(house, mbox(s.x0, s.x1, s.y0, s.y1, s.z0, s.z1), M.slats);
+  for (const s of (LAY.slats || [])) addMesh(sg(s), mbox(s.x0, s.x1, s.y0, s.y1, s.z0, s.z1), M.slats);
 }
 // columns
-for (const c of LAY.columns) addMesh(house, mbox(c.x - c.s / 2, c.x + c.s / 2, c.y0, c.y0 + c.h, c.z - c.s / 2, c.z + c.s / 2), M.stone);
+for (const c of LAY.columns) addMesh(sg(c), mbox(c.x - c.s / 2, c.x + c.s / 2, c.y0, c.y0 + c.h, c.z - c.s / 2, c.z + c.s / 2), M.stone);
 
 // floors (slabs) — top at the finished level, 0.35 thick so the plinth reads
-function shape(poly) { const s = new THREE.Shape(); poly.forEach(([x, z], i) => i ? s.lineTo(x, -z) : s.moveTo(x, -z)); s.closePath(); return s; }
+function shape(poly, holes = []) {
+  const s = new THREE.Shape(); poly.forEach(([x, z], i) => i ? s.lineTo(x, -z) : s.moveTo(x, -z)); s.closePath();
+  for (const h of holes) s.holes.push(new THREE.Path(h.map(([x, z]) => new THREE.Vector2(x, -z))));   // stair voids, double-height spaces
+  return s;
+}
 for (const f of LAY.floors) {
-  const g = new THREE.ExtrudeGeometry(shape(f.poly), { depth: 0.35, bevelEnabled: false });
+  const g = new THREE.ExtrudeGeometry(shape(f.poly, f.holes || []), { depth: 0.35, bevelEnabled: false });
   g.rotateX(-Math.PI / 2); g.translate(0, f.y - 0.35, 0);
-  addMesh(house, g, [M[f.mat] || M.oak, M.plinth], false, true);
+  addMesh(sg(f), g, [M[f.mat] || M.oak, M.plinth], (f.storey || 0) > 0, true);
+}
+// railings / balustrades: glass panel + anthracite handrail, [{a, b, y, h = 1.0, storey}]
+for (const r of (LAY.railings || [])) {
+  const [ax, az] = r.a, [bx, bz] = r.b, Lr = Math.hypot(bx - ax, bz - az), h = r.h ?? 1.0;
+  const g = new THREE.Group(); g.position.set(ax, 0, az); g.rotation.y = -Math.atan2(bz - az, bx - ax);
+  addMesh(g, mbox(0.02, Lr - 0.02, r.y + 0.05, r.y + h - 0.04, -0.01, 0.01), M.glass, false, false).renderOrder = 2;
+  addMesh(g, mbox(0, Lr, r.y + h - 0.04, r.y + h, -0.03, 0.03), M.frame);
+  addMesh(g, mbox(0, Lr, r.y, r.y + 0.05, -0.03, 0.03), M.frame);
+  sg(r).add(g);
 }
 // interior stair
 for (const st of LAY.stairs) {
   const rise = (st.ytop - st.ybot) / st.n, run = (st.x1 - st.x0) / st.n;
   // one solid block per tread: tread i spans [x0+(i-1)run, x0+i*run] with its top one riser lower than the previous (the old version stacked full-length boxes, so the top box hid every step)
-  for (let i = 1; i <= st.n; i++) addMesh(house, mbox(st.x0 + (i - 1) * run, st.x0 + i * run, st.ybot - 0.05, st.ytop - i * rise, st.z0, st.z1), M.stone_floor, false);
+  for (let i = 1; i <= st.n; i++) addMesh(sg(st), mbox(st.x0 + (i - 1) * run, st.x0 + i * run, st.ybot - 0.05, st.ytop - i * rise, st.z0, st.z1), M.stone_floor, false);
 }
 
 // ---------- hipped roofs (union of rectangles), soffit + fascia ----------
@@ -574,9 +610,10 @@ for (const r of LAY.roofs) hipRoof(r.rect[0], r.rect[1], r.rect[2], r.rect[3], r
 // ---------- furniture ----------
 for (const f of LAY.furniture) {
   const [x0, z0, x1, z1] = f.b;
-  addMesh(furniture, mbox(x0, x1, f.y0, f.y0 + Math.max(0.01, f.h), z0, z1), M[f.mat] || M.white, f.h > 0.05, true);
-  if (/cama/.test(f.name)) addMesh(furniture, mbox(x0 + 0.1, x1 - 0.1, f.y0 + f.h, f.y0 + f.h + 0.14, z0 + 0.12, z0 + 0.55), M.white);     // pillows
-  if (/sofá|sofa/i.test(f.name)) addMesh(furniture, mbox(x0, x1, f.y0, f.y0 + 0.42, z0, z1), M.fabric, true);
+  const fg = sg(f, furniture);
+  addMesh(fg, mbox(x0, x1, f.y0, f.y0 + Math.max(0.01, f.h), z0, z1), M[f.mat] || M.white, f.h > 0.05, true);
+  if (/cama|bed/i.test(f.name)) addMesh(fg, mbox(x0 + 0.1, x1 - 0.1, f.y0 + f.h, f.y0 + f.h + 0.14, z0 + 0.12, z0 + 0.55), M.white);     // pillows
+  if (/sofá|sofa/i.test(f.name)) addMesh(fg, mbox(x0, x1, f.y0, f.y0 + 0.42, z0, z1), M.fabric, true);
 }
 
 // ---------- site works ----------
@@ -735,10 +772,27 @@ controls.addEventListener('start', () => { anim = null; });
 
 // ---------- UI ----------
 function setRoof(on) {
-  roofs.visible = on;
+  roofs.visible = on && (typeof storeyShown === 'undefined' || storeyShown >= MAX_STOREY);
   const cb = document.getElementById('t-roof'); if (cb) cb.checked = on;
 }
 document.getElementById('t-roof').addEventListener('change', e => setRoof(e.target.checked));
+// storey cut-away: show storeys up to k (roof only when the top storey is shown)
+let storeyShown = Infinity;
+function setStorey(v) {
+  storeyShown = v === 'all' ? Infinity : +v;
+  for (const g of STOREYS.values()) g.visible = g.userData.storey <= storeyShown;
+  roofs.visible = storeyShown >= MAX_STOREY && document.getElementById('t-roof').checked;
+  const sel = document.getElementById('t-storey'); if (sel) sel.value = String(v);
+}
+if (MAX_STOREY > 0) {
+  const lab = document.createElement('label'); lab.className = 'toggle'; lab.htmlFor = 't-storey'; lab.textContent = (T.l_storey || 'Storeys') + ' ';
+  const sel = document.createElement('select'); sel.id = 't-storey';
+  const names = PROJ.storey_names || T.storey_names || [];
+  sel.innerHTML = `<option value="all">${T.storey_all || 'All'}</option>` + Array.from({ length: MAX_STOREY + 1 }, (_, k) => `<option value="${k}">${names[k] || (T.l_storey || 'Storey') + ' ' + k}</option>`).join('');
+  lab.appendChild(sel); document.querySelector('.toggles').appendChild(lab);
+  sel.addEventListener('change', () => setStorey(sel.value));
+}
+window.__storey = setStorey;
 document.getElementById('t-furn').addEventListener('change', e => { furniture.visible = e.target.checked; });
 document.getElementById('t-trees').addEventListener('change', e => { trees.visible = e.target.checked; });
 document.getElementById('t-spots').addEventListener('change', e => { showSpots = e.target.checked; });
@@ -797,6 +851,7 @@ for (const f of LAY.furniture) {
   if (x1 - x0 > z1 - z0) addSeg(x0 + (z1 - z0) / 2, cz, x1 - (z1 - z0) / 2, cz, (z1 - z0) / 2, f.y0, f.y0 + f.h);
   else addSeg(cx, z0 + (x1 - x0) / 2, cx, z1 - (x1 - x0) / 2, (x1 - x0) / 2, f.y0, f.y0 + f.h);
 }
+for (const r of (LAY.railings || [])) addSeg(r.a[0], r.a[1], r.b[0], r.b[1], 0.04, r.y, r.y + (r.h ?? 1.0));   // balustrades
 // retaining walls (same gaps as the meshes) and the plot boundary (gaps at the gates)
 for (const rw of LAY.retaining) {
   const [lo, hi] = plotZRange(rw.x); if (!isFinite(lo)) continue;
@@ -830,7 +885,7 @@ function floorAt(x, z, feet) {
       if (h <= feet + 0.45) best = Math.max(best, h);
     }
   }
-  if (best === -Infinity) for (const f of LAY.floors) if (f.y <= feet + 0.45 && inPolyXZ(x, z, f.poly)) best = Math.max(best, f.y);
+  if (best === -Infinity) for (const f of LAY.floors) if (f.y <= feet + 0.45 && inPolyXZ(x, z, f.poly) && !(f.holes || []).some(h => inPolyXZ(x, z, h))) best = Math.max(best, f.y);
   // inside the building footprint the slabs and stair rule; the terrain only counts outside it
   if (best > -Infinity && BLOCKS.some(r => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3])) return best;
   const g = heightAt(x, z);

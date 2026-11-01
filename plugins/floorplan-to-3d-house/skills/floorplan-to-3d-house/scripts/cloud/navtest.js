@@ -1,4 +1,7 @@
 const { chromium } = require('playwright');
+const fs = require('fs');
+// NAV_ROUTE=route.json: [[x, z, "label"], ...] or ["spawn", x, z] entries; without it the example's route runs
+const ROUTE = process.env.NAV_ROUTE ? JSON.parse(fs.readFileSync(process.env.NAV_ROUTE, 'utf8')) : null;
 (async () => {
   const S = process.env.WORK || process.cwd();   // project work dir (contains site3d/, three/)
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -13,9 +16,9 @@ const { chromium } = require('playwright');
     if (u.startsWith('http://local/')) return route.fulfill({ path: S + '/site3d/page.html', contentType: 'text/html' });
     return route.continue();
   });
-  await page.goto('http://local/x.html');
+  await page.goto('http://local/x.html', { waitUntil: 'domcontentloaded', timeout: 300000 });
   await page.waitForFunction(() => window.__ready && window.__nav, null, { timeout: 400000 });
-  const out = await page.evaluate(() => {
+  const out = await page.evaluate((route) => {
     const { setNav, NAV, navUpdate, camera } = window.__nav;
     setNav('walk');
     const log = [];
@@ -29,9 +32,16 @@ const { chromium } = require('playwright');
       }
       NAV.keys.clear();
       for (let i = 0; i < 40; i++) navUpdate(0.05);
-      log.push(`${label}: target(${tx},${tz}) at (${p.x.toFixed(2)}, ${p.z.toFixed(2)}) feet ${(p.y - 1.65 + 32).toFixed(2)} it=${it}`);
+      log.push(`${label}: target(${tx},${tz}) at (${p.x.toFixed(2)}, ${p.z.toFixed(2)}) feet ${(p.y - 1.65).toFixed(2)} it=${it}`);
     };
-    log.push(`start (${p.x.toFixed(2)}, ${p.z.toFixed(2)}) feet ${(p.y - 1.65 + 32).toFixed(2)}`);
+    log.push(`start (${p.x.toFixed(2)}, ${p.z.toFixed(2)}) feet ${(p.y - 1.65).toFixed(2)}`);
+    if (route) {
+      for (const r of route) {
+        if (r[0] === 'spawn') { camera.position.set(r[1], 0, r[2]); camera.position.y = window.__nav.floorAt(r[1], r[2], 5) + 1.65; continue; }
+        go(r[0], r[1], r[2]);
+      }
+      return log;
+    }
     go(-10.6, -3.0, 'pedestrian gate to the front door');
     go(-8.4, -3.0, 'through the front door (hall)');
     go(-8.4, -0.55, 'hall to corridor');
@@ -64,7 +74,7 @@ const { chromium } = require('playwright');
     go(1.05, -11.0, 'to the workshop south door');
     go(1.05, -8.5, 'out to the garden');
     return log;
-  });
+  }, ROUTE);
   console.log(out.join('\n'));
   await browser.close();
 })();

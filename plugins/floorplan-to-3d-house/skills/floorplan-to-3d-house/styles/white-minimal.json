@@ -1,0 +1,48 @@
+{
+ "name": "White minimal",
+ "description": "All-white volumes, pale stone, light frames, very low dark roof; timber reduced to pale accents.",
+ "roof_tile": "flat_dark",
+ "pitch_hint": 12,
+ "tint": {
+  "stone": [
+   1.18,
+   1.16,
+   1.22
+  ],
+  "slats": [
+   1.45,
+   1.4,
+   1.38
+  ],
+  "garage": [
+   1.45,
+   1.4,
+   1.38
+  ],
+  "frame": [
+   5.0,
+   5.0,
+   5.0
+  ],
+  "front": [
+   1.6,
+   1.55,
+   1.5
+  ],
+  "terrace": [
+   1.08,
+   1.08,
+   1.1
+  ],
+  "plinth": [
+   1.35,
+   1.35,
+   1.38
+  ],
+  "roof": [
+   0.85,
+   0.85,
+   0.88
+  ]
+ }
+}

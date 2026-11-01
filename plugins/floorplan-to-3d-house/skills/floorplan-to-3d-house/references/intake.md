@@ -9,7 +9,8 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
 2. **Storeys**
    - "Single storey"
    - "Single storey, split levels following the slope (Recommended on sloping plots)"
-   - "Two or more storeys": see multi-storey.md and state the current limitation before going on.
+   - "Two storeys": supported (see multi-storey.md); ask the floor-to-floor height if the drawing lacks sections (default 2.95 m).
+   - "Three or more storeys": the schema allows it, but only two are tested; say so.
 3. **Photos (optional)**: "Can you share 1–2 photos? They make the result much closer to what you imagine."
    - "Style references (houses I like)"
    - "Photos of the plot / street"

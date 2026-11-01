@@ -14,7 +14,8 @@ L = json.load(open(args[1] if len(args) > 1 else 'site3d/layout.json', encoding=
 md_out = sys.argv[sys.argv.index('--md') + 1] if '--md' in sys.argv else None
 Q = dict(setback_min=P.get('setback_min', 3.0), area_limit=P.get('area_limit'), riser_max=0.18, going_min=0.27,
          blondel=(0.60, 0.66), stair_width_min=0.90, door_min=0.70, front_door_min=0.90, garage_door_min=2.40,
-         corridor_min=0.90, bedroom_min_area=9.0, bedroom_min_side=2.40, wc_min_area=2.5, landing_min=0.90)
+         corridor_min=0.90, bedroom_min_area=9.0, bedroom_min_side=2.40, wc_min_area=2.5, landing_min=0.90,
+         headroom_min=2.0, guard_h=1.0, upper_sill_min=0.9)
 Q.update(P.get('qa', {}))
 ERR, WARN, OK = [], [], []
 
@@ -101,6 +102,73 @@ for t in L.get('trees', []):
         x0, z0, x1, z1 = b['rect']
         if x0 - 0.5 < t['x'] < x1 + 0.5 and z0 - 0.5 < t['z'] < z1 + 0.5:
             ERR.append(f'Tree at ({t["x"]}, {t["z"]}) stands in/against "{b["name"]}": move or mark as removed')
+
+# 7) storeys: headroom over stairs, guards at voids / upper terraces, low glazing on upper floors
+def in_poly(x, z, poly):
+    ins = False
+    for i in range(len(poly)):
+        (xi, zi), (xj, zj) = poly[i], poly[i - 1]
+        if (zi > z) != (zj > z) and x < (xj - xi) * (z - zi) / (zj - zi) + xi: ins = not ins
+    return ins
+
+
+def solid_at(x, z, f):
+    return in_poly(x, z, f['poly']) and not any(in_poly(x, z, h) for h in f.get('holes', []))
+
+
+FLOORS = L.get('floors', [])
+for k, st in enumerate(L.get('stairs', [])):
+    n = st['n']; rise = (st['ytop'] - st['ybot']) / n; run = (st['x1'] - st['x0']) / n; worst = None
+    for i in range(1, n + 1):
+        x, top = st['x0'] + (i - 0.5) * run, st['ytop'] - i * rise
+        for zc in (st['z0'] + 0.1, (st['z0'] + st['z1']) / 2, st['z1'] - 0.1):
+            for f in FLOORS:
+                under = f['y'] - 0.35
+                if under > top + 0.05 and solid_at(x, zc, f):
+                    worst = under - top if worst is None else min(worst, under - top)
+    if worst is not None:
+        (ERR if worst < Q['headroom_min'] else OK).append(f'Stair {k}: headroom {worst:.2f} m under the slab above (min {Q["headroom_min"]})' + (': enlarge the void or move the stair' if worst < Q['headroom_min'] else ''))
+
+
+def guarded(x, z, y, walls=True):
+    for r in L.get('railings', []):
+        if abs(r['y'] - y) < 0.3 and r.get('h', 1.0) >= Q['guard_h'] - 1e-6:
+            u, f = seg_proj((x, z), r['a'], r['b'])
+            if -0.02 <= u <= 1.02 and math.dist((x, z), f) < 0.3: return True
+    for w in (L['walls'] if walls else []):
+        if w['y0'] <= y + 0.1 and w['y0'] + w['h'] >= y + Q['guard_h']:
+            u, f = seg_proj((x, z), w['a'], w['b'])
+            if -0.02 <= u <= 1.02 and math.dist((x, z), f) < w['t'] / 2 + 0.3: return True
+    for st in L.get('stairs', []):                    # arrival edge of a stair that tops out on this floor
+        if abs(st['ytop'] - y) < 0.05 and st['z0'] - 0.05 <= z <= st['z1'] + 0.05 and abs(x - st['x0']) < 0.3: return True
+    return False
+
+
+def edge_check(poly, y, what):
+    bad = 0.0
+    for i in range(len(poly)):
+        a, b = poly[i - 1], poly[i]; Ln = math.dist(a, b); m = max(1, int(Ln / 0.25))
+        for j in range(m):
+            t = (j + 0.5) / m; x, z = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            if not guarded(x, z, y): bad += Ln / m
+    (WARN if bad > 0.3 else OK).append(f'{what}: ' + (f'{bad:.1f} m of edge without a {Q["guard_h"]:.1f} m guard (add "railings")' if bad > 0.3 else 'edges guarded'))
+
+
+for f in FLOORS:
+    for h in f.get('holes', []):
+        edge_check(h, f['y'], f'Void in floor "{f.get("name", "")}" at y {f["y"]:+.2f}')
+    if f.get('storey', 0) >= 1 and f.get('mat') == 'terrace':
+        edge_check(f['poly'], f['y'], f'Upper terrace "{f.get("name", "")}"')
+for w in L['walls']:
+    if w.get('storey', 0) < 1: continue
+    (ax, az), (bx, bz) = w['a'], w['b']; Ln = math.dist(w['a'], w['b']) or 1; ux, uz = (bx - ax) / Ln, (bz - az) / Ln
+    for o in w.get('ops', []):
+        cx, cz = ax + ux * (o['o'] + o['w'] / 2), az + uz * (o['o'] + o['w'] / 2)
+        both = all(any(abs(f['y'] - w['y0']) < 0.05 and solid_at(cx + s * -uz * 0.6, cz + s * ux * 0.6, f) for f in FLOORS) for s in (1, -1))
+        if both: continue                               # opens onto a floor (balcony / terrace) on both sides
+        low = o['kind'] in ('slide', 'door_glass', 'door', 'front', 'open') or (o['kind'] == 'window' and o.get('sill', 0) < Q['upper_sill_min'])
+        if low and not any(guarded(cx + sx * -uz * 0.2, cz + sx * ux * 0.2, w['y0'], walls=False) for sx in (1, -1)):   # a railing in front or behind
+            WARN.append(f'Upper-floor {o["kind"]} {o["w"]:.2f} m in wall {w.get("tag") or w["a"]}: sill {o.get("sill", 0):.2f} m, no balcony floor or railing (needs ≥ {Q["upper_sill_min"]} m sill or a guard)')
 
 lines = [f'# Layout QA — {P.get("name", "")}', '', f'{len(ERR)} error(s), {len(WARN)} warning(s), {len(OK)} check(s) passed.',
          '', '_Generic good-practice thresholds, not a building-code check._', '']
