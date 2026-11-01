@@ -1,0 +1,241 @@
+<title>{{page_title}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-bleed 3D canvas; a floating "title block" panel echoing the architect's sheet, bottom sheet on phones */
+:root {
+  --bg: #e9e5dc;          /* page behind canvas */
+  --panel: rgba(252, 251, 248, 0.94);
+  --ink: #1d1c1a;
+  --muted: #6b675f;
+  --rule: #1d1c1a;
+  --hair: #d6d1c6;
+  --accent: #c8102e;      /* survey red of the plot limit */
+  --chip: #efebe3;
+  --sky-top: #9fb7cc;
+  --sky-bottom: #e8e4da;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: rgba(24, 26, 29, 0.92); --ink: #ece8df; --muted: #a29d92;
+    --rule: #ece8df; --hair: #3a3d42; --accent: #ff5a6e; --chip: #2a2d31;
+    --sky-top: #2b3a4a; --sky-bottom: #59626b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: rgba(24, 26, 29, 0.92); --ink: #ece8df; --muted: #a29d92;
+  --rule: #ece8df; --hair: #3a3d42; --accent: #ff5a6e; --chip: #2a2d31;
+  --sky-top: #2b3a4a; --sky-bottom: #59626b; color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
+#stage { position: fixed; inset: 0; background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.spot {
+  position: absolute; transform: translate(-50%, -100%); font: 500 11px/1 var(--mono);
+  color: #1d1c1a; background: rgba(255, 255, 255, 0.86); padding: 2px 4px; border-radius: 2px;
+  white-space: nowrap; font-variant-numeric: tabular-nums; border-bottom: 2px solid #dd6e00;
+}
+.spot.ffl { border-bottom-color: var(--accent); font-weight: 500; }
+
+.panel {
+  position: fixed; z-index: 2;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: 300px; max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: auto; background: var(--panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--rule); display: flex; flex-direction: column;
+}
+.panel section { padding: 12px 14px; border-top: 1px solid var(--hair); display: grid; gap: 8px; }
+.panel section:first-child { border-top: 0; }
+.eyebrow { font: 500 11px/1.2 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 500 26px/1.05 var(--display); text-wrap: balance; }
+.sub { margin: 0; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.views { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+button.view { font-size: 12px; padding: 8px 2px; }
+button.view, .seg button {
+  font: 500 13px/1 var(--display); letter-spacing: .03em; text-transform: uppercase;
+  background: var(--chip); color: var(--ink); border: 1px solid transparent; padding: 8px 4px; cursor: pointer; border-radius: 2px;
+}
+button.view:hover, .seg button:hover { border-color: var(--hair); }
+button.view[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toggles { display: grid; gap: 6px; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; cursor: pointer; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.sunrow { display: flex; align-items: center; gap: 10px; }
+.sunrow input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.sunrow output { font: 500 13px/1 var(--mono); font-variant-numeric: tabular-nums; width: 44px; text-align: right; }
+table.legend { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.legend td { padding: 3px 0; border-bottom: 1px solid var(--hair); }
+table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px; white-space: nowrap; padding-right: 10px; font-variant-numeric: tabular-nums; width: 1%; }
+.note { font-size: 12.5px; line-height: 1.45; color: var(--muted); margin: 0; }
+.note b { color: var(--ink); font-weight: 500; }
+.credits { margin-top: 8px; font-size: 11.5px; }
+.note ul { margin: 4px 0 0; padding-left: 16px; display: grid; gap: 2px; }
+.badge { display: inline-block; font: 600 11px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); padding: 3px 5px; border-radius: 2px; }
+
+.compass {
+  position: fixed; z-index: 2; right: calc(max(16px, env(safe-area-inset-right, 0px)));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  width: 56px; height: 56px; border-radius: 50%; background: var(--panel); border: 1px solid var(--rule);
+  display: grid; place-items: center;
+}
+.compass svg { width: 44px; height: 44px; transition: none; }
+.hint {
+  position: fixed; z-index: 2; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 68px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+  font: 400 12px/1.3 var(--body); color: var(--ink); background: var(--panel); padding: 6px 8px; border: 1px solid var(--hair);
+}
+#toggle-panel { display: none; }
+.panel.collapsed section:not(.head):not(.navsec) { display: none; }
+.panel.collapsed #toggle-panel { display: inline-block; justify-self: start; }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; font: 500 14px var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); pointer-events: none; }
+
+@media (max-width: 640px) {
+  .panel {
+    top: auto; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px));
+    width: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); max-height: 52%;
+  }
+  .panel.collapsed section:not(.head):not(.navsec) { display: none; }
+  #toggle-panel { display: inline-block; justify-self: start; }
+  .compass { top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto; right: max(12px, env(safe-area-inset-right, 0px)); width: 48px; height: 48px; }
+  .compass svg { width: 38px; height: 38px; }
+  .hint { display: none; }
+  h1 { font-size: 22px; }
+}
+
+/* free navigation */
+.nseg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.nseg button { font: 500 13px/1 var(--display); letter-spacing: .03em; text-transform: uppercase; background: var(--chip); color: var(--ink); border: 1px solid transparent; padding: 9px 4px; cursor: pointer; border-radius: 2px; }
+.nseg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.nav-help {
+  position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 12px);
+  background: var(--panel); border: 1px solid var(--rule); padding: 8px 12px; font: 400 13px/1.45 var(--body); color: var(--ink);
+  max-width: min(560px, calc(100% - 32px)); text-align: center; pointer-events: none;
+}
+.nav-help kbd { font: 500 11px/1 var(--mono); border: 1px solid var(--hair); border-bottom-width: 2px; padding: 2px 5px; border-radius: 3px; background: var(--chip); }
+.nav-help .click-hint { display: block; color: var(--accent); font-weight: 500; }
+.nav-help.locked .click-hint { display: none; }
+@media (pointer: coarse) { .nav-help .keys { display: none; } .nav-help .click-hint { display: none; } }
+@media (pointer: fine) { .nav-help .touch { display: none; } }
+.crosshair { position: fixed; z-index: 3; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 0 0 1px rgba(0,0,0,.4); pointer-events: none; }
+.joy {
+  position: fixed; z-index: 3; left: calc(max(16px, env(safe-area-inset-left, 0px)) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 150px);
+  width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.6); touch-action: none;
+  display: grid; place-items: center; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.joy span { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,.85); box-shadow: 0 2px 6px rgba(0,0,0,.3); pointer-events: none; }
+.dbtn {
+  position: fixed; z-index: 3; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 8px); width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,255,255,.85); border: 1px solid rgba(0,0,0,.2); font: 600 22px/1 var(--display); color: #1d1c1a; touch-action: none;
+}
+#drone-up { bottom: calc(env(safe-area-inset-bottom, 0px) + 230px); }
+#drone-down { bottom: calc(env(safe-area-inset-bottom, 0px) + 160px); }
+</style>
+
+<div id="stage"></div>
+<div id="labels" aria-hidden="true"></div>
+<div class="loading" id="loading">{{loading}}</div>
+
+<aside class="panel" id="panel" aria-label="{{aria_panel}}">
+  <section class="head">
+    <span class="eyebrow">{{eyebrow}}</span>
+    <h1>{{title}}</h1>
+    <p class="sub">{{subtitle_html}}</p>
+    <button class="view" id="toggle-panel" aria-expanded="true" aria-controls="panel">{{hide}}</button>
+  </section>
+
+  <section class="navsec">
+    <span class="eyebrow">{{nav}}</span>
+    <div class="nseg" role="group" aria-label="{{aria_nav}}">
+      <button data-nav="orbit" aria-pressed="true">{{orbit}}</button>
+      <button data-nav="walk" aria-pressed="false">{{walk}}</button>
+      <button data-nav="drone" aria-pressed="false">{{drone}}</button>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">{{view}}</span>
+    <div class="views" role="group" aria-label="{{aria_views}}">
+      <button class="view" id="v-aerial" data-view="aerial" aria-pressed="true">{{v_aerial}}</button>
+      <button class="view" id="v-street" data-view="street" aria-pressed="false">{{v_street}}</button>
+      <button class="view" id="v-garden" data-view="garden" aria-pressed="false">{{v_garden}}</button>
+      <button class="view" id="v-interior" data-view="interior" aria-pressed="false">{{v_interior}}</button>
+      <button class="view" id="v-top" data-view="top" aria-pressed="false">{{v_top}}</button>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">{{layers}}</span>
+    <div class="toggles">
+      <label class="toggle" for="t-roof">{{l_roof}} <input type="checkbox" id="t-roof" checked></label>
+      <label class="toggle" for="t-furn">{{l_furn}} <input type="checkbox" id="t-furn" checked></label>
+      <label class="toggle" for="t-terrain">{{l_terrain}} <input type="checkbox" id="t-terrain" checked></label>
+      <label class="toggle" for="t-spots">{{l_spots}} <input type="checkbox" id="t-spots"></label>
+      <label class="toggle" for="t-trees">{{l_trees}} <input type="checkbox" id="t-trees" checked></label>
+      <label class="toggle" for="t-plan">{{l_plan}} <input type="checkbox" id="t-plan"></label>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">{{sun_label}}</span>
+    <div class="seg dseg" role="group" aria-label="{{aria_date}}">
+      <button id="d-jun" data-dec="23.44" aria-pressed="true">{{d_jun}}</button>
+      <button id="d-mar" data-dec="0" aria-pressed="false">{{d_mar}}</button>
+      <button id="d-dec" data-dec="-23.44" aria-pressed="false">{{d_dec}}</button>
+    </div>
+    <div class="sunrow">
+      <input type="range" id="hour" min="7" max="20.5" step="0.25" value="19" aria-label="{{aria_hour}}">
+      <output id="hour-out" for="hour">19:00</output>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">{{areas_label}}</span>
+    <table class="legend">
+{{areas_rows}}
+    </table>
+  </section>
+
+  <section>
+    <span class="badge">{{badge}}</span>
+    <div class="note">
+{{notes_html}}
+      <p class="note credits">{{credits}}</p>
+    </div>
+  </section>
+</aside>
+
+<div class="compass" title="{{true_north}}">
+  <svg viewBox="-22 -22 44 44" aria-label="{{aria_north}}" role="img">
+    <g id="needle">
+      <polygon points="0,-17 5,3 0,0 -5,3" fill="var(--accent)"></polygon>
+      <polygon points="0,17 5,3 0,0 -5,3" fill="var(--muted)"></polygon>
+    </g>
+    <text x="0" y="-12" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-size="9" fill="var(--ink)" id="nlabel"></text>
+  </svg>
+</div>
+<div class="nav-help" id="nav-help" hidden>
+  <span class="click-hint">{{h_click}}</span>
+  <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {{h_move}} <kbd>Shift</kbd> {{h_run}}<span class="drone-only" hidden> · <kbd>{{k_space}}</kbd>/<kbd>E</kbd> {{h_up}} <kbd>C</kbd>/<kbd>Q</kbd> {{h_down}}</span></span>
+  <span class="touch">{{h_touch}}</span>
+</div>
+<div class="crosshair" id="crosshair" hidden></div>
+<div class="joy" id="joy" hidden aria-label="{{aria_joy}}"><span id="joy-knob"></span></div>
+<button class="dbtn" id="drone-up" hidden aria-label="{{aria_up}}">▲</button>
+<button class="dbtn" id="drone-down" hidden aria-label="{{aria_down}}">▼</button>
+<div class="hint" id="hint">{{hint}}</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>

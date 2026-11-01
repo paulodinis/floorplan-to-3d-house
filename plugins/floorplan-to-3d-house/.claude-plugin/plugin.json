@@ -1,0 +1,8 @@
+{
+  "name": "floorplan-to-3d-house",
+  "version": "1.0.0",
+  "description": "Turn a house site plan or floor plan (PDF/DXF) into a DXF, a 2D plan for approval, an interactive 3D model, GLB/3D-DXF exports and an optional Blender drone or walkthrough video.",
+  "author": { "name": "Paulo" },
+  "license": "MIT",
+  "keywords": ["architecture", "floor plan", "site plan", "dxf", "3d", "glb", "three.js", "blender", "house", "walkthrough"]
+}
