@@ -18,7 +18,7 @@
   - `navtest.js` takes a route file (`NAV_ROUTE`);
   - `shot2.js` accepts `js:` actions;
   - page loads tolerate slow machines.
-- New icon and GitHub banner.
+- New icon and GitHub banner (designed in Canva; flat SVG versions kept in `assets/`).
 
 ## 1.0.0 (2026-11-01): first community release
 - Packaged as a Claude plugin with three skills: `floorplan-to-3d-house` (full workflow), `validate-plan` (QA + 2D plan) and `drone-video` (Blender video).

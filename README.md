@@ -1,4 +1,4 @@
-![floorplan-to-3d-house](assets/banner.png)
+![floorplan-to-3d-house](assets/banner@2x.png)
 
 # floorplan-to-3d-house
 
@@ -45,7 +45,7 @@ Full documentation: [plugins/floorplan-to-3d-house/README.md](plugins/floorplan-
 ```
 .claude-plugin/marketplace.json     marketplace catalogue (this repo is a one-plugin marketplace)
 plugins/floorplan-to-3d-house/      the plugin: manifest, 3 skills, scripts, CC0 textures, examples, docs
-assets/                             icon (SVG/PNG) and banner
+assets/                             icon and banner (made in Canva; flat SVG alternatives in *-flat.*)
 ```
 
 ## License
