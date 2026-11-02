@@ -2,9 +2,10 @@ import bpy, bmesh, math, os
 P = globals().get("PARAMS") or {}
 D = P["dir"]
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
-ns = {'HELPERS_ONLY': True, 'PARAMS': P}   # materials.py reads PARAMS at import
-exec(open(os.path.join(SD, "materials.py"), encoding="utf-8").read(), ns)
-new_tree, N, L, ramp_mix, noise, bump, mul_color = ns['new_tree'], ns['N'], ns['L'], ns['ramp_mix'], ns['noise'], ns['bump'], ns['mul_color']
+import sys
+if SD not in sys.path: sys.path.insert(0, SD)   # sibling modules: nodes.py, scatter.py
+from nodes import new_tree, N, L, ramp_mix, noise, bump, mul_color
+from scatter import scatter_group
 SPOTS = P['spots']                       # [[x, z, abs_height], ...] from site.json spot heights
 def idw(x, z):
     sw = sh = 0.0
@@ -69,10 +70,7 @@ for side, sign in ((G['z0'], -1), (G['z1'], 1)):
             v.co.z = idw(v.co.x, -v.co.y) - P.get('ffl', 32.0) + 0.02
 bm.to_mesh(road.data); bm.free(); road.data.update()
 # 3) far canopies only beyond 70 m, on the new terrain
-setup_ns = {}
-src = open(os.path.join(SD, "setup.py"), encoding="utf-8").read()
-exec("import bpy\n" + src[src.index('def scatter_group('):src.index('def add_scatter(')], setup_ns)
-ng = setup_ns['scatter_group']('Scatter_far3', bpy.data.objects['A_Shrub'], 0.006, 5.0, 12.0, 0.1, 77, True)
+ng = scatter_group('Scatter_far3', bpy.data.objects['A_Shrub'], 0.006, 5.0, 12.0, 0.1, 77, True)
 dist = [x for x in ng.nodes if x.bl_idname == 'GeometryNodeDistributePointsOnFaces'][0]
 pos = ng.nodes.new('GeometryNodeInputPosition'); vm = ng.nodes.new('ShaderNodeVectorMath'); vm.operation = 'LENGTH'
 cmp = ng.nodes.new('FunctionNodeCompare'); cmp.data_type = 'FLOAT'; cmp.operation = 'GREATER_THAN'; cmp.inputs[1].default_value = 70.0

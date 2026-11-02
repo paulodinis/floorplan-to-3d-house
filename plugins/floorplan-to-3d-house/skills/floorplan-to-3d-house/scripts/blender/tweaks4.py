@@ -2,9 +2,9 @@ import bpy, bmesh, os
 P = globals().get("PARAMS") or {}
 D = P["dir"]
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
-ns = {'HELPERS_ONLY': True, 'PARAMS': P}   # materials.py reads PARAMS at import
-exec(open(os.path.join(SD, "materials.py"), encoding="utf-8").read(), ns)
-new_tree, N, L, ramp_mix, noise, bump, mul_color = ns['new_tree'], ns['N'], ns['L'], ns['ramp_mix'], ns['noise'], ns['bump'], ns['mul_color']
+import sys
+if SD not in sys.path: sys.path.insert(0, SD)   # sibling modules: nodes.py, scatter.py
+from nodes import new_tree, N, L, ramp_mix, noise, bump, mul_color
 # 1) base ground under everything fills the wedges left where the lane leaves the surveyed window
 if 'Base_Ground' not in bpy.data.objects:
     bm = bmesh.new(); bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=4000)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3 (2026-11-03)
+- **Packaging (plugin review): no more `exec()` in the Blender pipeline.**
+  - shader-node helpers moved from `materials.py` to `scripts/blender/nodes.py`, and `scatter_group` from `setup.py` to `scripts/blender/scatter.py`; the passes `import` them instead of exec'ing `materials.py` or slices of `setup.py`;
+  - `run_all.py` runs each pass file with `runpy.run_path(..., init_globals={"PARAMS": P})`; entry point is now `runpy.run_path(r"<scripts>/blender/run_all.py", init_globals={"PARAMS": {...}})["result"]`.
+
 ## 1.1.2 (2026-11-03)
 - **Packaging (plugin review):**
   - the sky is now `scripts/web/tex/sky.jpg` (79 KB, sRGB at 1/4 radiance) instead of a 2 MB base64 `sky.txt`; `engine.js` decodes it back to linear half-float for the environment map and no longer needs `RGBELoader`;

@@ -4,9 +4,10 @@ P = globals().get("PARAMS") or {}
 D = P["dir"]
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
 S2B = lambda x, y, z: Vector((x, -z, y))
-ns = {'HELPERS_ONLY': True, 'PARAMS': P}   # materials.py reads PARAMS at import
-exec(open(os.path.join(SD, "materials.py"), encoding="utf-8").read(), ns)
-new_tree, N, L, ramp_mix, noise, bump, mul_color = ns['new_tree'], ns['N'], ns['L'], ns['ramp_mix'], ns['noise'], ns['bump'], ns['mul_color']
+import sys
+if SD not in sys.path: sys.path.insert(0, SD)   # sibling modules: nodes.py, scatter.py
+from nodes import new_tree, N, L, ramp_mix, noise, bump, mul_color
+from scatter import scatter_group
 
 # 1) close the 6 cm step between the fine ground window and the coarse apron (low sun made it cast a line)
 G = P['window']                          # detailed ground window {x0, x1, z0, z1} = site.json 'ground'
@@ -84,13 +85,9 @@ sun = bpy.data.objects['Sun']; sun.data.color = (1.0, 0.70, 0.45); sun.data.ener
 
 # 7) a few scattered shrubs/trees in the surrounding meadow for depth (instances, cheap)
 far = bpy.data.objects['Far_Ground']
-setup_ns = {}
-src = open(os.path.join(SD, "setup.py"), encoding="utf-8").read()
-fn_src = src[src.index('def scatter_group('):src.index('def add_scatter(')]
-exec("import bpy\n" + fn_src, setup_ns)
 bush = bpy.data.objects['A_Shrub']
 md = far.modifiers.get('Scatter') or far.modifiers.new('Scatter', 'NODES')
-md.node_group = setup_ns['scatter_group']('Scatter_far', bush, 0.004, 3.0, 7.0, 0.1, 77, True); md.show_viewport = False
+md.node_group = scatter_group('Scatter_far', bush, 0.004, 3.0, 7.0, 0.1, 77, True); md.show_viewport = False
 
 bpy.ops.wm.save_mainfile()
 result = dict(moved=moved)
