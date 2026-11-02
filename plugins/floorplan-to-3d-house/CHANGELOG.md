@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 (2026-11-03)
+- **Packaging (plugin review):**
+  - the sky is now `scripts/web/tex/sky.jpg` (79 KB, sRGB at 1/4 radiance) instead of a 2 MB base64 `sky.txt`; `engine.js` decodes it back to linear half-float for the environment map and no longer needs `RGBELoader`;
+  - author is now "Paulo Silva" in `plugin.json`, matching the marketplace owner;
+  - `setup_workspace.sh` pins ezdxf to `v1.4.5` instead of cloning `master`.
+
 ## 1.1.1 (2026-11-02)
 - **Fix (Blender pipeline):** `tweaks.py`, `tweaks2.py`, `tweaks4.py` and `terrain.py` imported the `materials.py` helpers (`HELPERS_ONLY`) without passing `PARAMS`, so `materials.py` failed with `KeyError: 'dir'` and `run_all.py` stopped after the first pass. The helpers namespace now carries `PARAMS`, and `materials.py` no longer requires `dir` when imported as helpers.
 

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 const SITE = __SITE_JSON__;
 const PROJ = __PROJECT_JSON__;     // project.json: name, location, north, UI strings, views (see project.example.json)
@@ -69,18 +68,37 @@ function maskTex(url) {
   return t;
 }
 
-// sky lighting: Radiance HDR shipped as base64 text (the host serves no .hdr type)
-fetch('tex/sky.txt').then(r => r.text()).then(b64 => {
-  const bin = atob(b64.trim()), bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const d = new RGBELoader().parse(bytes.buffer);
-  const hdr = new THREE.DataTexture(d.data, d.width, d.height, THREE.RGBAFormat, d.type);
+// sky lighting: equirectangular sky stored as an sRGB JPEG at 1/SKY_SCALE of its HDR radiance
+// (the host serves no .hdr type); decoded back to linear half-float before PMREM. The sun disc,
+// which clips, is added back below.
+const SKY_SCALE = 4.0;
+new THREE.ImageLoader().load('tex/sky.jpg', img => {
+  const w = img.width, h = img.height, cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
+  const px = g.getImageData(0, 0, w, h).data, lut = new Uint16Array(256);
+  for (let i = 0; i < 256; i++) { const v = i / 255; lut[i] = THREE.DataUtils.toHalfFloat((v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)) * SKY_SCALE); }
+  const data = new Uint16Array(w * h * 4), one = THREE.DataUtils.toHalfFloat(1);
+  for (let i = 0; i < px.length; i += 4) { data[i] = lut[px[i]]; data[i + 1] = lut[px[i + 1]]; data[i + 2] = lut[px[i + 2]]; data[i + 3] = one; }
+  // re-inject the clipped sun disc (half the sky's energy) as a small gaussian so PMREM keeps its warmth:
+  // centre in px, solid-angle-weighted excess linear RGB above SKY_SCALE, measured from the source HDR
+  const SUN = { x: 613.9, y: 227.0, sigma: 2.5, rgb: [162030, 112331, 43191] }, rad = Math.ceil(SUN.sigma * 4), blob = [];
+  let norm = 0;
+  for (let y = Math.round(SUN.y) - rad; y <= Math.round(SUN.y) + rad; y++) for (let x = Math.round(SUN.x) - rad; x <= Math.round(SUN.x) + rad; x++) {
+    const gw = Math.exp(-((x - SUN.x) ** 2 + (y - SUN.y) ** 2) / (2 * SUN.sigma ** 2));
+    norm += gw * Math.cos(((y + 0.5) / h - 0.5) * Math.PI); blob.push([x, y, gw]);
+  }
+  for (const [x, y, gw] of blob) {
+    const i = (y * w + ((x % w) + w) % w) * 4;
+    for (let c = 0; c < 3; c++) data[i + c] = THREE.DataUtils.toHalfFloat(THREE.DataUtils.fromHalfFloat(data[i + c]) + SUN.rgb[c] * gw / norm);
+  }
+  const hdr = new THREE.DataTexture(data, w, h, THREE.RGBAFormat, THREE.HalfFloatType);
   Object.assign(hdr, { colorSpace: THREE.LinearSRGBColorSpace, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, flipY: true, mapping: THREE.EquirectangularReflectionMapping });
   hdr.needsUpdate = true;
   const pm = new THREE.PMREMGenerator(renderer);
   scene.environment = pm.fromEquirectangular(hdr).texture;
   hdr.dispose(); pm.dispose();
-}).catch(() => {});
+}, undefined, () => {});
 
 // ---------- procedural textures (canvas) ----------
 function rand(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }

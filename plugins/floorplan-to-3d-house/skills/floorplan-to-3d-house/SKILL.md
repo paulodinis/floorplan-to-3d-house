@@ -137,7 +137,7 @@ On "Change": update the layout, bump `v<n>`, rerun QA and repeat. Never take a c
    - `NAV_ROUTE=route.json node scripts/cloud/navtest.js` walks a route of `[x, z, "label"]` waypoints (gate → door → corridor → stair → rooms → terrace → garden; up the stair on two storeys). Without `NAV_ROUTE` it runs the example's route.
    - `node scripts/cloud/shot2.js '[{"actions":["#v-street"],"out":"tmp/s.png"}]'`. Actions are CSS selectors to click, or `js:<code>` (for example `js:window.__storey("0")`).
    - Chromium flags: `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`, about 3 min per shot.
-4. Publish `site3d/publish.html` and every file in `site3d/tex/` with the Artifact tool. It must be a full `<!DOCTYPE html>` document. `.hdr` is not served, so the sky ships as base64 in `sky.txt`. Republish to the same link.
+4. Publish `site3d/publish.html` and every file in `site3d/tex/` with the Artifact tool. It must be a full `<!DOCTYPE html>` document. `.hdr` is not served, so the sky ships as `sky.jpg` (sRGB at 1/4 of its HDR radiance; `engine.js` restores the range). Republish to the same link.
 
 ## Step 7. Exports and AI pack
 1. `python3 scripts/cloud/build_page.py project.json --export`.

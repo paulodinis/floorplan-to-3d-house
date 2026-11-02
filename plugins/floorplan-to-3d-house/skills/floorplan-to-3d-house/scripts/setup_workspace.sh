@@ -7,7 +7,7 @@ SKILL="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p site3d/tex export
 cp -n "$SKILL"/scripts/web/tex/* site3d/tex/ || true
 python3 -c "import ezdxf" 2>/dev/null || {
-  [ -d ezdxf-src ] || git clone --depth 1 https://github.com/mozman/ezdxf.git ezdxf-src
+  [ -d ezdxf-src ] || git clone --depth 1 --branch v1.4.5 https://github.com/mozman/ezdxf.git ezdxf-src
   echo "ezdxf: use EZDXF_SRC=$PWD/ezdxf-src/src (scripts default to ./ezdxf-src/src)"; }
 if [ ! -f three/t/build/three.module.js ]; then
   rm -rf three/_src && git clone --depth 1 --branch r160 --filter=blob:none --sparse https://github.com/mrdoob/three.js.git three/_src
