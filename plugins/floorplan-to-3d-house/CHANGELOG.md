@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1 (2026-11-02)
+- **Fix (Blender pipeline):** `tweaks.py`, `tweaks2.py`, `tweaks4.py` and `terrain.py` imported the `materials.py` helpers (`HELPERS_ONLY`) without passing `PARAMS`, so `materials.py` failed with `KeyError: 'dir'` and `run_all.py` stopped after the first pass. The helpers namespace now carries `PARAMS`, and `materials.py` no longer requires `dir` when imported as helpers.
+
 ## 1.1.0 (2026-11-01)
 - **Elevations & section:** `elevations.py` draws the four elevations (titled by true bearing, with level / eave / ridge marks, finished and natural ground) and a section through the stair. Output: PNG per view, one sheet and a layered DXF.
 - **Style presets:**

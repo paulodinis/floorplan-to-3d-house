@@ -4,7 +4,7 @@ P = globals().get("PARAMS") or {}
 D = P["dir"]
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
 S2B = lambda x, y, z: Vector((x, -z, y))
-ns = {'HELPERS_ONLY': True}
+ns = {'HELPERS_ONLY': True, 'PARAMS': P}   # materials.py reads PARAMS at import
 exec(open(os.path.join(SD, "materials.py"), encoding="utf-8").read(), ns)
 new_tree, N, L, ramp_mix, noise, bump, mul_color = ns['new_tree'], ns['N'], ns['L'], ns['ramp_mix'], ns['noise'], ns['bump'], ns['mul_color']
 

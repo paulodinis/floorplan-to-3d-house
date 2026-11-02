@@ -2,7 +2,7 @@ import bpy, math, os
 from mathutils import Vector
 
 P = globals().get("PARAMS") or {}
-D = P["dir"]
+D = P.get("dir", "")                     # not needed when imported with HELPERS_ONLY
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
 UVM = {  # tile size in metres used when the GLB UVs were baked (uv * size = metres)
     'Wall_Limestone_Cladding': (2.0, 1.6), 'Wood_Slats': (0.6, 2.0), 'Door_Garage_WoodSlats': (0.6, 2.0), 'Door_Front_DarkWood': (0.6, 2.0),

@@ -2,7 +2,7 @@ import bpy, bmesh, math, os
 P = globals().get("PARAMS") or {}
 D = P["dir"]
 SD = P.get("scripts_dir", os.path.join(D, "scripts"))
-ns = {'HELPERS_ONLY': True}
+ns = {'HELPERS_ONLY': True, 'PARAMS': P}   # materials.py reads PARAMS at import
 exec(open(os.path.join(SD, "materials.py"), encoding="utf-8").read(), ns)
 new_tree, N, L, ramp_mix, noise, bump, mul_color = ns['new_tree'], ns['N'], ns['L'], ns['ramp_mix'], ns['noise'], ns['bump'], ns['mul_color']
 SPOTS = P['spots']                       # [[x, z, abs_height], ...] from site.json spot heights

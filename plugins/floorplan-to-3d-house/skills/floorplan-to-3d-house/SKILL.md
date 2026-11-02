@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
 ---
 
 # Floor plan → DXF → 2D plan (approval) → 3D model → video
