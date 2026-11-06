@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0 (2026-11-06)
+- Video resolution question: 1920×1080, 1600×900 (recommended) or 1280×720, each with its estimated render time for 15 / 30 / 60 s (RTX 4060 reference; 1600×900 measured, the others scaled by pixel count). Asked in the approval gate and in `/drone-video`; the estimate is replaced by the measured test-frame time before launching.
+
 ## 1.1.2 (2026-11-03)
 - **Packaging (plugin review):**
   - the sky is now `scripts/web/tex/sky.jpg` (79 KB, sRGB at 1/4 radiance) instead of a 2 MB base64 `sky.txt`; `engine.js` decodes it back to linear half-float for the environment map and no longer needs `RGBELoader`;

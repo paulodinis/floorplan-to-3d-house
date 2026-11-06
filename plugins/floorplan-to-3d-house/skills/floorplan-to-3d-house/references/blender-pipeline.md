@@ -38,6 +38,17 @@ Requirements:
    - copy them back and look at them;
    - fix framing, obstructions and missing parts.
 6. **Measure:** read `Time:` in the log and quote frames × s/frame. Examples (RTX 4060, 1600×900, 24 samples, haze): 15 s ≈ 3 h 15, 60 s ≈ 12 h 45.
+
+### Resolution and time estimates (ask before rendering)
+25 fps, Cycles 24 samples with haze, reference GPU RTX 4060. 1600×900 was measured; the other two are scaled by pixel count (1920×1080 = 1.44×, 1280×720 = 0.64×), so treat them as estimates until a test frame is measured on the user's machine. Render time grows roughly with pixel count; other GPUs scale in proportion.
+
+| Resolution | s/frame (est.) | 15 s (375 fr.) | 30 s (750 fr.) | 60 s (1500 fr.) |
+|---|---|---|---|---|
+| 1920×1080 | ~45 s | ~4 h 40 | ~9 h 25 | ~18 h 45 |
+| 1600×900 (recommended) | ~31 s (measured) | ~3 h 15 | ~6 h 30 | ~12 h 55 |
+| 1280×720 | ~20 s | ~2 h 05 | ~4 h 10 | ~8 h 20 |
+
+When quoting, show the row for the chosen length and replace the estimate with the measured s/frame after the test frames (step 5).
 7. **Final:**
    - render in a subprocess: `blender -b <blend> -o <dir>/frames/f_ -a`;
    - start the watcher: `CS_DIR=<dir> CS_TOTAL=<frames> CS_OUT=<name>_ blender -b --factory-startup --python encode.py`, which writes the MP4 (H.264) and `<name>_DONE.txt`;

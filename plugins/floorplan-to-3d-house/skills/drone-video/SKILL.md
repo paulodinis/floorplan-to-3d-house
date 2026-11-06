@@ -5,7 +5,7 @@ description: >
   "make a 15 / 30 / 60 second video", "add a walkthrough inside the house", "re-render the video" or types /drone-video
   for a project whose 2D plan was already approved in floorplan-to-3d-house and whose GLB exists.
 metadata:
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Blender drone / walkthrough video for an approved house model
@@ -22,7 +22,12 @@ Reply in the user's language. Label confidence as [Certain], [Likely] or [Assump
 ## Steps
 1. **Ask once (AskUserQuestion), if not already given:**
    - length: 15 s (Recommended) / 30 s / 60 s with an interior pass, plus a custom length;
-   - resolution: 1600×900 (Recommended) / 1280×720 (about half the time) / 1920×1080.
+   - resolution, always these three options, each labelled with its estimated time for the chosen length (if the length is not known yet, ask it first or put the 15/30/60 s times in the option description):
+     - "1600×900 (Recommended)": ~31 s/frame (measured), 15 s ≈ 3 h 15 · 30 s ≈ 6 h 30 · 60 s ≈ 12 h 55;
+     - "1920×1080 (Full HD)": ~45 s/frame, 15 s ≈ 4 h 40 · 30 s ≈ 9 h 25 · 60 s ≈ 18 h 45;
+     - "1280×720 (faster)": ~20 s/frame, 15 s ≈ 2 h 05 · 30 s ≈ 4 h 10 · 60 s ≈ 8 h 20.
+   - State that the times are estimates for an RTX 4060 (1600×900 measured, the others scaled by pixel count) and will be corrected after the test frames (step 7). Other GPUs: scale in proportion.
+   - Set `res` in params.json from the answer.
 2. **Transfer the GLB.** Split it if it is over the device transfer cap: `split -b 15000000`. Join the parts on the machine.
 3. **Write params.json:**
    - from `site3d/site.json`: `window` = ground, `spots` = [x, z, h];

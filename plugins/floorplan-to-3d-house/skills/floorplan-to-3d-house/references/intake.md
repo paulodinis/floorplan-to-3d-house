@@ -27,7 +27,7 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
 - **Slope:** split levels (Recommended) / one platform with retaining walls / a basement garage.
 - **Must-keep items:** existing trees, walls, access position.
 
-## Approval gate (Step 5): one call, two questions
+## Approval gate (Step 5): one call, two or three questions
 - **Approve the 2D plan?**
   - "Approved, go to 3D"
   - "Approved with small changes (describe in Other)"
@@ -38,6 +38,11 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
   - "30 s"
   - "60 s with an interior pass"
   - Quote time = frames × measured s/frame. The reference GPU (RTX 4060) does 1600×900 at 24 samples in about 25–31 s per frame.
+- **Video resolution?** Ask together with the length, only if a video was requested. Show the estimated time for the chosen length in each option (table in `references/blender-pipeline.md`), for example for 15 s:
+  - "1600×900 (Recommended)": ~31 s/frame, ~3 h 15
+  - "1920×1080 (Full HD)": ~45 s/frame, ~4 h 40
+  - "1280×720 (faster)": ~20 s/frame, ~2 h 05
+  - Say the times are estimates for an RTX 4060 and get corrected after a measured test frame.
 
 ## Handling answers
 - **Style photos:** extract a palette with style-guide.md and confirm it in one line. Don't ask the style question.
