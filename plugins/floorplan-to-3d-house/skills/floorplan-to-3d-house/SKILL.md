@@ -128,6 +128,8 @@ Then ask one AskUserQuestion with two questions:
   - Only offer it if Blender with the MCP add-on is available on the user's machine.
   - The time estimate comes from a measured test frame (Step 8). Before measuring, give a range.
 
+**Model only = no video questions.** If the user has already said they want only the 3D model (in the request, the intake or any earlier answer: "só a maqueta", "apenas o modelo 3D", "sem vídeo", "just the model", "no video"), drop the video question: the gate is the approval question alone. Never ask the video length, resolution or render time, and skip Step 8. The same holds once they answer "No" here. Bring the video up again only if the user does.
+
 On "Change": update the layout, bump `v<n>`, rerun QA and repeat. Never take a closed question as approval.
 
 ## Step 6. 3D page
@@ -157,6 +159,7 @@ Zip:
 Explain that AI video tools don't take GLB and don't keep dimensions. Use the renders or the video as references.
 
 ## Step 8. Blender video (optional, only if the user asked)
+Skip this step, and ask nothing about it, when the user chose the model only (see Step 5).
 See `references/blender-pipeline.md`.
 1. Write `params.json`: dir, glb, camera keys, sun, haze, frames, resolution.
 2. Run `run_all.py` in a background Blender process, not inside the MCP call; it takes longer than the MCP timeout.

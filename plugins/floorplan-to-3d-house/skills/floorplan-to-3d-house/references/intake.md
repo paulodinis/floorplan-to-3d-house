@@ -32,7 +32,7 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
   - "Approved, go to 3D"
   - "Approved with small changes (describe in Other)"
   - "Change and show again"
-- **Blender video?** Only ask this if Blender + the MCP add-on is available.
+- **Blender video?** Only ask this if Blender + the MCP add-on is available, and never when the user already chose the model only ("só a maqueta", "just the 3D model", "no video"); then the gate is the approval question alone, and no length, resolution or time question follows.
   - "No"
   - "15 s (Recommended)"
   - "30 s"

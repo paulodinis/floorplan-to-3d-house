@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.4 (2026-11-07)
+- **Model only = no video questions:** when the user chooses only the 3D model (in the request, the intake or an earlier answer), the approval gate asks the approval question alone and the skill never asks the video length, resolution or render time; Step 8 and `drone-video` are skipped unless the user raises the video again.
+
 ## 1.1.3 (2026-11-03)
 - **Packaging (plugin review): no more `exec()` in the Blender pipeline.**
   - shader-node helpers moved from `materials.py` to `scripts/blender/nodes.py`, and `scatter_group` from `setup.py` to `scripts/blender/scatter.py`; the passes `import` them instead of exec'ing `materials.py` or slices of `setup.py`;

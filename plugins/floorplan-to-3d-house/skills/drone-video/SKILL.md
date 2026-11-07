@@ -20,7 +20,7 @@ Reply in the user's language. Label confidence as [Certain], [Likely] or [Assump
 - **Project folder on the user's machine.** Example: `<Videos>/<Project>/`, with a copy of `<FT>/scripts/blender/`.
 
 ## Steps
-1. **Ask once (AskUserQuestion), if not already given:**
+1. **Ask once (AskUserQuestion), if not already given.** Only when the user asked for a video; if they chose the model only, don't run this skill and don't ask:
    - length: 15 s (Recommended) / 30 s / 60 s with an interior pass, plus a custom length;
    - resolution: 1600×900 (Recommended) / 1280×720 (about half the time) / 1920×1080.
 2. **Transfer the GLB.** Split it if it is over the device transfer cap: `split -b 15000000`. Join the parts on the machine.
