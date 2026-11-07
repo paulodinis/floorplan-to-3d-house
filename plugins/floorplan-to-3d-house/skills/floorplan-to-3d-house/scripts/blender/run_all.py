@@ -2,7 +2,7 @@
 PARAMS keys: dir (project folder on the PC, holds <name>.glb), glb (file name), scripts_dir (this folder),
 window {x0,x1,z0,z1} (detailed ground window, scene metres), spots [[x,z,h],...], ffl (abs level of y=0),
 camera_keys [[frame,[x,y,z],[tx,ty,tz]],...] (scene coords: x east, y up, z south), frames_src, frames_out,
-res [w,h], samples, sun {lat, dec, hour, north_deg}, room_lights [[x,y,z],...], outdoor_zones [[x0,z0,x1,z1],...], render (bool)."""
+res [w,h], samples, sun {lat, dec, hour, north_deg}, room_lights [[x,y,z],...], outdoor_zones [[x0,z0,x1,z1],...], render (bool), doors [{x,z,y0,w,kind,frame,toward}] (camera_path.py)."""
 import bpy, os, json, struct, runpy, sys
 P = globals().get("PARAMS") or {}
 D = P["dir"]; SD = P.get("scripts_dir", os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.path.join(D, "scripts"))
@@ -50,7 +50,7 @@ bpy.ops.wm.save_as_mainfile(filepath=blend)
 def run(name):
     ns = runpy.run_path(os.path.join(SD, name), init_globals={"PARAMS": P}, run_name="__pass__")
     log.append((name, ns.get("result")))
-for name in ("materials.py", "setup.py", "tweaks.py", "tweaks2.py"):
+for name in ("materials.py", "setup.py", "tweaks.py", "tweaks2.py", "doors.py"):
     run(name)
 if "Far_Ground" in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects["Far_Ground"])
 for name in ("tweaks4.py", "terrain.py", "style.py", "haze.py", "final.py"):

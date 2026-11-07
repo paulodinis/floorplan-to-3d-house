@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0 (2026-11-07)
+- **Every video is a 360° orbit of the house**, starting and ending on the front-door side, above the tree crowns.
+- **60 s video = orbit + the house from inside:** the camera comes down to the front door, the door opens, and it walks every storey (climbing straight stairs) to the doorway of every space, looking in; each door on the way opens toward the room, glass sliding doors are looked through. Open-plan rooms with no wall between them are linked.
+- New `scripts/cloud/camera_path.py`: builds `camera_keys`, `frames_src`/`frames_out`, `doors`, the tour order and the spaces left out (with reasons) from `layout.json`; `--preview` draws the path over the plan. Tested on both examples (15 of 17 spaces on one storey: the detached garage and workshop are reached only from outside; 12 of 12 on two storeys).
+- **Path approval before rendering:** `camera_path.py --preview` draws the orbit and, per storey, the walk on the approval plan's 2 m grid with numbered stops; the skill shows it and asks to approve or change the path (`--skip`, `--order`, `--radius`, `--height`, `--cw`) before any Blender work.
+- New Blender pass `scripts/blender/doors.py` (run by `run_all.py`): splits the merged door leaves without edit-mode operators, puts each pivot on its hinge and keys a 95° swing toward the next room; the front-door handle swings with its leaf.
+
 ## 1.3.0 (2026-11-07)
 - **Reference grid on the approval plan:** `plan2d_simple.py` draws a light lettered grid (columns A, B, C… west → east; rows 1, 2, 3… top → bottom; labels on all four sides) so the user can say where things go ("pool in K14", "garage from C3 to G5"). 2 m squares by default, `PLAN_GRID_STEP` / `PLAN_GRID=0` to override. Writes `<png>.grid.json` (cell → scene x/z) and an `A-GRID` layer in the DXF; the skill explains how to turn a cell into metres and confirm it.
 - **Model only = no video questions:** when the user chooses only the 3D model (in the request, the intake or an earlier answer), the approval gate asks the approval question alone and the skill never asks the video length, resolution or render time; Step 8 and `drone-video` are skipped unless the user raises the video again.

@@ -34,9 +34,9 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
   - "Change and show again"
 - **Blender video?** Only ask this if Blender + the MCP add-on is available, and never when the user already chose the model only ("só a maqueta", "just the 3D model", "no video"); then the gate is the approval question alone, and no length, resolution or time question follows.
   - "No"
-  - "15 s (Recommended)"
-  - "30 s"
-  - "60 s with an interior pass"
+  - "15 s (Recommended)": 360° orbit of the house
+  - "30 s": slower 360° orbit
+  - "60 s: 360° + inside": orbit, then the front door opens and the camera goes to the doorway of every space
   - Quote time = frames × measured s/frame. The reference GPU (RTX 4060) does 1600×900 at 24 samples in about 25–31 s per frame.
 - **Video resolution?** Ask together with the length, only if a video was requested. Show the estimated time for the chosen length in each option (table in `references/blender-pipeline.md`), for example for 15 s:
   - "1600×900 (Recommended)": ~31 s/frame, ~3 h 15

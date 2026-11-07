@@ -5,7 +5,7 @@ description: >
   "run the design QA", "check setbacks / stairs / room sizes", "regenerate the 2D plan" or types /validate-plan
   on a project made with floorplan-to-3d-house (a work dir with site3d/layout.json and project.json).
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Validate a house layout and regenerate the 2D approval plan

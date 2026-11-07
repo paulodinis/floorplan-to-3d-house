@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Floor plan → DXF → 2D plan (approval) → 3D model → video
@@ -37,6 +37,7 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `masks.py`: ground masks from the PDF
   - `masks2.py`: ground masks from the layout
   - `plan2d.py`: plan DXF
+  - `camera_path.py`: video camera path from the layout (360° orbit; for 60 s also the walk through every space) and the doors to open
   - `plan2d_simple.py`: plan PNG for approval, with setbacks, levels, north, area table and a lettered reference grid (`<png>.grid.json`)
   - `storey_filter.py`: one storey's layout, for per-storey plans
   - `elevations.py`: 4 elevations + a section through the stair (PNG sheet + DXF)
@@ -51,7 +52,7 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `gaps.py`: openings detection, faithful mode
   - `tex.py`: procedural textures
 - `scripts/web/`: `template.html`, `engine.js` (three.js r160, Orbit/Walk/Drone navigation, sun study), `export_glb.js`, `i18n.json`, `tex/`.
-- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `style.py`, `haze.py`, `final.py`, `encode.py`).
+- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `doors.py`, `style.py`, `haze.py`, `final.py`, `encode.py`).
 - `styles/`: style presets (`portuguese-contemporary`, `white-minimal`, `rural-stone`, `nordic-timber`).
 - `examples/`: a complete reference project with `project.json`, `site.json`, `layout.json`, masks and `layout_generator_example.py`. Run it once to see the expected outputs. `examples/two-storey/` is the same site with a two-storey house (stair void, railings, balcony).
 - `references/`: read these when the step needs them.
@@ -129,7 +130,7 @@ Send the PNG and DXF, and tell the user they can point at places by grid cell (e
 Then ask one AskUserQuestion with two questions, plus a third when a video is wanted or likely:
 - **Approve the 2D plan?** "Approved, go to 3D" / "Approved with small changes (describe)" / "Change and show again".
 - **Blender video at the end?**
-  - No / 10 s / 15 s (recommended) / 30 s / 60 s, plus a custom length.
+  - No / 15 s (recommended) / 30 s: a 360° orbit of the house / 60 s: the 360° orbit, then the front door opens and the camera visits the doorway of every space; plus a custom length.
   - Only offer it if Blender with the MCP add-on is available on the user's machine.
   - The time estimate comes from a measured test frame (Step 8). Before measuring, give a range.
 - **Video resolution?** (if a video may be wanted) Three options, each with the estimated time for the length: 1920×1080 (~45 s/frame), 1600×900 (recommended, ~31 s/frame measured) and 1280×720 (~20 s/frame), RTX 4060 reference. Table in `references/blender-pipeline.md`. If the answer to the video question is "No", ignore it.
@@ -167,12 +168,19 @@ Explain that AI video tools don't take GLB and don't keep dimensions. Use the re
 ## Step 8. Blender video (optional, only if the user asked)
 Skip this step, and ask nothing about it, when the user chose the model only (see Step 5).
 See `references/blender-pipeline.md`.
-1. Write `params.json`: dir, glb, camera keys, sun, haze, frames, resolution.
-2. Run `run_all.py` in a background Blender process, not inside the MCP call; it takes longer than the MCP timeout.
-3. Plan the camera path:
-   - 6–8 keys;
-   - check canopy clearance;
-   - for walkthroughs, open the doors on the path; glTF objects use quaternions, so set `rotation_mode='XYZ'` before keying.
+1. Camera path (every video): `python3 scripts/cloud/camera_path.py site3d/layout.json <seconds> export/camera.json --site site3d/site.json --preview export/camera_path.png`, then merge `camera_keys`, `frames_src`, `frames_out` and `doors` from `export/camera.json` into `params.json`. Don't hand-place keys.
+   - **Every length is a full 360° orbit** around the house, starting and ending on the front-door side (radius = house + 10 m, height ≥ 10 m and above the tree crowns).
+   - **60 s (any length ≥ 45 s): orbit, then the house from inside.** The camera comes down to the front door, the door opens, and it walks every storey (climbing the straight stairs) to the doorway of **every space** (each door on the way opens toward the room; glass sliding doors are looked through, not opened), pausing to look in. Open-plan rooms with no wall between them are linked too.
+   - Read `tour` and `not_visited` in the output and tell the user which spaces are left out and why: rooms reached only from outside (a detached garage) or through a stair the script cannot follow (stairs along z, L/U or spiral stairs).
+   - **Path approval (mandatory stop, before any Blender work).** Run it with `--preview export/camera_path.png --lang <project lang>`, look at the PNG, send it, and ask one AskUserQuestion: "Approve the video path?" — "Yes, launch the video" / "Change the path (describe it)". The PNG shows the orbit (radius, height, start, direction) and, per storey, the walk on the same 2 m grid as the approval plan, with the stops numbered and listed with their cells. Turn the answer into options and run again:
+     - "skip 5 and 7" → `--skip "<room of stop 5>,<room of stop 7>"` (stop numbers come from `stops` in the last output);
+     - "living room first", "bedrooms before the kitchen" → `--order "<room>,<room>"`;
+     - "orbit closer / further / higher / lower", "the other way round" → `--radius <m>` (default house + 10 m), `--height <m>` (default ≥ 10 m), `--cw`;
+     - a place given by grid cell ("start the walk at C11", "also look into K13") → find the room at that cell in the plan and use `--order` or `--skip`; say so in one line when a wish can't be expressed with these options.
+     Show the new PNG and ask again. Repeat until "Yes"; never treat silence as yes. Only then build the scene, render test frames and launch.
+   - If it stops with "house too large" (about 15 spaces fit in 60 s), offer 90 s.
+2. Write `params.json`: dir, glb, the camera keys and doors from step 1, sun, haze, resolution.
+3. Run `run_all.py` in a background Blender process, not inside the MCP call; it takes longer than the MCP timeout. Its `doors.py` pass splits the door leaves, puts each pivot on its hinge and keys the openings.
 4. Render 5–6 test frames at 50 %, look at them, fix what's wrong.
 5. **Measure** seconds per frame, then quote frames × s/frame.
 6. Launch the final render plus the `encode.py` watcher. Schedule a check, if the host supports it, and deliver the MP4.
