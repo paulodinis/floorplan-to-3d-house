@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.5 (2026-11-07)
+- **Reference grid on the approval plan:** `plan2d_simple.py` draws a light lettered grid (columns A, B, C… west → east; rows 1, 2, 3… top → bottom; labels on all four sides) so the user can say where things go ("pool in K14", "garage from C3 to G5"). 2 m squares by default, `PLAN_GRID_STEP` / `PLAN_GRID=0` to override. Writes `<png>.grid.json` (cell → scene x/z) and an `A-GRID` layer in the DXF; the skill explains how to turn a cell into metres and confirm it.
+
 ## 1.1.4 (2026-11-07)
 - **Model only = no video questions:** when the user chooses only the 3D model (in the request, the intake or an earlier answer), the approval gate asks the approval question alone and the skill never asks the video length, resolution or render time; Step 8 and `drone-video` are skipped unless the user raises the video again.
 

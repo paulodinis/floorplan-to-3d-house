@@ -18,10 +18,12 @@ if os.environ.get('PROJECT_JSON'):                      # project.json values wi
 _lang = (_p.get('lang') if os.environ.get('PROJECT_JSON') else None) or 'en'
 TX = {'en': dict(up='up', down='down', road='ROAD', ceded='ceded strip', title='Simplified 2D plan — for approval before 3D', cols=('Volume', 'Level', 'Area (m²)'), total='Total', limit='limit',
                  legend=('exterior wall', 'interior wall', 'window / glazing', 'door (swing) / garage door (dashed)', 'plot boundary', 'setback to boundary', 'setback below minimum', '▽ floor level', 'ceded to public domain'),
-                 plot='Plot', disclaimer='Indicative proposal — not for construction or permit', dec='.'),
+                 plot='Plot', disclaimer='Indicative proposal — not for construction or permit', dec='.',
+                 grid='Reference grid: {step} m squares — say a cell, e.g. "C4"'),
       'pt-PT': dict(up='sobe', down='desce', road='ESTRADA', ceded='cedência', title='Plano 2D simplificado — para aprovação antes do 3D', cols=('Volume', 'Nível', 'Área (m²)'), total='Total', limit='limite',
                  legend=('parede exterior', 'parede interior', 'janela / envidraçado', 'porta (arco) / portão (tracejado)', 'limite do terreno', 'afastamento ao limite', 'afastamento abaixo do mínimo', '▽ cota do pavimento', 'cedência ao domínio público'),
-                 plot='Terreno', disclaimer='Proposta indicativa — sem valor de projeto', dec=',')}[_lang if _lang in ('en', 'pt-PT') else 'en']
+                 plot='Terreno', disclaimer='Proposta indicativa — sem valor de projeto', dec=',',
+                 grid='Grelha de referência: quadrados de {step} m — indica uma célula, ex.: "C4"')}[_lang if _lang in ('en', 'pt-PT') else 'en']
 north = meta.get('north_deg', site.get('meta', {}).get('north_deg', 0.0))
 fmt = lambda v, n=2: f'{v:.{n}f}'.replace('.', TX['dec'])
 
@@ -272,6 +274,32 @@ for i, (c, t) in enumerate(legend):
 if meta.get('plot_area'):
     d.text((lx + 560, ly), f"{TX['plot']}: {fmt(meta['plot_area'], 0)} m²", fill=(0, 0, 0), font=F_AREA)
 d.text((lx + 560, ly + 28), TX['disclaimer'], fill=(120, 120, 120), font=F_AREA)
+# ---------- reference grid: letters = columns (west→east), numbers = rows (top→bottom of the sheet) ----------
+# lets the user point at a place ("sofa in C4", "move the garage to F2-G3"); OUT.grid.json maps cells back to scene x/z
+GRID = None
+if os.environ.get('PLAN_GRID', '1') != '0':
+    gx0, gz0, gx1, gz1 = min(xs), min(zs), max(xs), max(zs)
+    step = float(os.environ.get('PLAN_GRID_STEP', '2') or 2)          # 2 m squares by default; PLAN_GRID_STEP=<m> to change
+    ncol, nrow = math.ceil((gx1 - gx0) / step - 1e-6), math.ceil((gz1 - gz0) / step - 1e-6)
+    col_name = lambda i: (col_name(i // 26 - 1) if i >= 26 else '') + chr(65 + i % 26)
+    ov = Image.new('RGBA', im.size, (0, 0, 0, 0)); do = ImageDraw.Draw(ov); gc = (40, 110, 200, 85)
+    ex, ez = gx0 + ncol * step, gz0 + nrow * step
+    for i in range(ncol + 1): do.line([Q(gx0 + i * step, gz0), Q(gx0 + i * step, ez)], fill=gc, width=1)
+    for j in range(nrow + 1): do.line([Q(gx0, gz0 + j * step), Q(ex, gz0 + j * step)], fill=gc, width=1)
+    im.paste(Image.alpha_composite(im.convert('RGBA'), ov).convert('RGB').crop((0, 0, W, H - TABLE_H)), (0, 0))
+    d = ImageDraw.Draw(im); F_GRID = f(max(13, min(20, int(step * S * 0.45))), True); lc = (30, 90, 170)
+    for i in range(ncol):
+        cx_, _ = Q(gx0 + (i + 0.5) * step, gz0)
+        d.text((cx_, Q(0, gz0)[1] - 8), col_name(i), fill=lc, font=F_GRID, anchor='md', stroke_width=4, stroke_fill=(255, 255, 255))
+        d.text((cx_, Q(0, ez)[1] + 8), col_name(i), fill=lc, font=F_GRID, anchor='mt', stroke_width=4, stroke_fill=(255, 255, 255))
+    for j in range(nrow):
+        _, cy_ = Q(gx0, gz0 + (j + 0.5) * step)
+        d.text((Q(gx0, 0)[0] - 10, cy_), str(j + 1), fill=lc, font=F_GRID, anchor='rm', stroke_width=4, stroke_fill=(255, 255, 255))
+        d.text((Q(ex, 0)[0] + 10, cy_), str(j + 1), fill=lc, font=F_GRID, anchor='lm', stroke_width=4, stroke_fill=(255, 255, 255))
+    d.text((lx + 560, ly + 56), TX['grid'].format(step=fmt(step, 0 if step == int(step) else 1)), fill=lc, font=F_AREA)
+    GRID = dict(x0=gx0, z0=gz0, step=step, cols=ncol, rows=nrow, col_labels=[col_name(i) for i in range(ncol)],
+                note='cell <L><n>: x in [x0+i*step, x0+(i+1)*step], z in [z0+(n-1)*step, z0+n*step]; i = column index from 0; scene x east, z south')
+    json.dump(GRID, open(os.path.splitext(OUT)[0] + '.grid.json', 'w'), indent=1)
 im.save(OUT); print('png', im.size, 'setbacks', [round(s[0], 2) for s in setbacks], 'below_min', [round(s[0], 2) for s in setbacks if s[0] < MIN_SB])
 
 # ---------- add setbacks + north to the plan DXF ----------
@@ -285,4 +313,13 @@ if DXF:
     cx, cy = max(xs) + 2, -min(zs) - 2
     msp.add_line((cx, cy), (cx + 3 * vx, cy - 3 * vy), dxfattribs={'layer': 'A-NORTH'})
     msp.add_text('N', height=0.8, dxfattribs={'layer': 'A-NORTH'}).set_placement((cx + 3.6 * vx, cy - 3.6 * vy))
+    if GRID:
+        if 'A-GRID' not in doc.layers: doc.layers.add('A-GRID').rgb = (120, 160, 220)
+        g = GRID; st = g['step']; ex, ez = g['x0'] + g['cols'] * st, g['z0'] + g['rows'] * st; th = max(0.3, st * 0.25)
+        for i in range(g['cols'] + 1): msp.add_line((g['x0'] + i * st, -g['z0']), (g['x0'] + i * st, -ez), dxfattribs={'layer': 'A-GRID'})
+        for j in range(g['rows'] + 1): msp.add_line((g['x0'], -(g['z0'] + j * st)), (ex, -(g['z0'] + j * st)), dxfattribs={'layer': 'A-GRID'})
+        for i, lab in enumerate(g['col_labels']):
+            msp.add_text(lab, height=th, dxfattribs={'layer': 'A-GRID'}).set_placement((g['x0'] + (i + 0.5) * st, -g['z0'] + th), align=ezdxf.enums.TextEntityAlignment.BOTTOM_CENTER)
+        for j in range(g['rows']):
+            msp.add_text(str(j + 1), height=th, dxfattribs={'layer': 'A-GRID'}).set_placement((g['x0'] - th, -(g['z0'] + (j + 0.5) * st)), align=ezdxf.enums.TextEntityAlignment.MIDDLE_RIGHT)
     doc.saveas(DXF); print('dxf ok')

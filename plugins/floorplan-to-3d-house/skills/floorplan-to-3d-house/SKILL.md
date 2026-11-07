@@ -37,7 +37,7 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `masks.py`: ground masks from the PDF
   - `masks2.py`: ground masks from the layout
   - `plan2d.py`: plan DXF
-  - `plan2d_simple.py`: plan PNG for approval, with setbacks, levels, north and area table
+  - `plan2d_simple.py`: plan PNG for approval, with setbacks, levels, north, area table and a lettered reference grid (`<png>.grid.json`)
   - `storey_filter.py`: one storey's layout, for per-storey plans
   - `elevations.py`: 4 elevations + a section through the stair (PNG sheet + DXF)
   - `sun_report.py`: direct-sun hours per room and ground sun maps (equinox, both solstices)
@@ -108,14 +108,19 @@ Author `site3d/layout.json` following `references/layout-schema.md`. `examples/l
 Run, in order:
 1. `python3 scripts/cloud/validate_layout.py project.json --md export/qa.md`. Fix the errors, or present each one as a decision for the user.
 2. `python3 scripts/cloud/plan2d.py export/plan.dxf /tmp/x.png` writes the DXF with layers A-WALL, A-GLAZ, A-DOOR, A-ROOM…
-3. `python3 scripts/cloud/plan2d_simple.py site3d/layout.json site3d/site.json export/plan_v<n>.png export/plan.dxf site3d/tex/mask1.png` writes the approval PNG and adds setback dimensions and north to the DXF.
+3. `python3 scripts/cloud/plan2d_simple.py site3d/layout.json site3d/site.json export/plan_v<n>.png export/plan.dxf site3d/tex/mask1.png` writes the approval PNG and adds setback dimensions, north and the reference grid (layer `A-GRID`) to the DXF. It also writes `export/plan_v<n>.grid.json`.
 
 Two storeys: run steps 2–3 once per storey after `python3 scripts/cloud/storey_filter.py site3d/layout.json <k> site3d/layout_s<k>.json --label "<name>"` (`LAYOUT_JSON=site3d/layout_s<k>.json` for plan2d.py). See `references/multi-storey.md`.
 
 Look at the PNG with Read before showing it: labels, door swings, setbacks.
 
+**Reference grid.** The plan carries a light grid: letters = columns (west → east), numbers = rows (top → bottom of the sheet), labelled on all four sides. Squares are 2 m by default; `PLAN_GRID_STEP=<m>` changes it, `PLAN_GRID=0` turns it off. Past column Z the letters go on AA, AB… When the user places something by cell ("a piscina em K14", "sofá no canto nordeste de J9", "garagem de C3 a G5"):
+- read `plan_v<n>.grid.json`: cell `<L><n>` spans x ∈ [x0 + i·step, x0 + (i+1)·step], z ∈ [z0 + (n−1)·step, z0 + n·step] (i = column index from 0, scene x east, z south);
+- a cell alone = its centre; a corner word = that corner of the cell, on the sheet (top = row 1 side); a range = the rectangle from the first cell to the last;
+- confirm in one line with the metres it resolves to and what it touches (wall, setback, tree), then apply it to `layout.json`.
+
 ## Step 5. Approval gate (mandatory stop)
-Send the PNG and DXF. Summarise:
+Send the PNG and DXF, and tell the user they can point at places by grid cell (e.g. "C4"). Summarise:
 - programme and areas;
 - measured vs assumed;
 - the QA errors and warnings;
