@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.1.1"
+  version: "1.2.0"
 ---
 
 # Floor plan → DXF → 2D plan (approval) → 3D model → video
@@ -126,12 +126,13 @@ Send the PNG and DXF, and tell the user they can point at places by grid cell (e
 - the QA errors and warnings;
 - 2–4 debatable points, such as tight passages, area near the cap, trees affected or setbacks below the minimum.
 
-Then ask one AskUserQuestion with two questions:
+Then ask one AskUserQuestion with two questions, plus a third when a video is wanted or likely:
 - **Approve the 2D plan?** "Approved, go to 3D" / "Approved with small changes (describe)" / "Change and show again".
 - **Blender video at the end?**
   - No / 10 s / 15 s (recommended) / 30 s / 60 s, plus a custom length.
   - Only offer it if Blender with the MCP add-on is available on the user's machine.
   - The time estimate comes from a measured test frame (Step 8). Before measuring, give a range.
+- **Video resolution?** (if a video may be wanted) Three options, each with the estimated time for the length: 1920×1080 (~45 s/frame), 1600×900 (recommended, ~31 s/frame measured) and 1280×720 (~20 s/frame), RTX 4060 reference. Table in `references/blender-pipeline.md`. If the answer to the video question is "No", ignore it.
 
 **Model only = no video questions.** If the user has already said they want only the 3D model (in the request, the intake or any earlier answer: "só a maqueta", "apenas o modelo 3D", "sem vídeo", "just the model", "no video"), drop the video question: the gate is the approval question alone. Never ask the video length, resolution or render time, and skip Step 8. The same holds once they answer "No" here. Bring the video up again only if the user does.
 

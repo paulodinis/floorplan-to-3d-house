@@ -1,15 +1,14 @@
 # Changelog
 
-## 1.1.5 (2026-11-07)
+## 1.3.0 (2026-11-07)
 - **Reference grid on the approval plan:** `plan2d_simple.py` draws a light lettered grid (columns A, B, C… west → east; rows 1, 2, 3… top → bottom; labels on all four sides) so the user can say where things go ("pool in K14", "garage from C3 to G5"). 2 m squares by default, `PLAN_GRID_STEP` / `PLAN_GRID=0` to override. Writes `<png>.grid.json` (cell → scene x/z) and an `A-GRID` layer in the DXF; the skill explains how to turn a cell into metres and confirm it.
-
-## 1.1.4 (2026-11-07)
 - **Model only = no video questions:** when the user chooses only the 3D model (in the request, the intake or an earlier answer), the approval gate asks the approval question alone and the skill never asks the video length, resolution or render time; Step 8 and `drone-video` are skipped unless the user raises the video again.
-
-## 1.1.3 (2026-11-03)
 - **Packaging (plugin review): no more `exec()` in the Blender pipeline.**
   - shader-node helpers moved from `materials.py` to `scripts/blender/nodes.py`, and `scatter_group` from `setup.py` to `scripts/blender/scatter.py`; the passes `import` them instead of exec'ing `materials.py` or slices of `setup.py`;
   - `run_all.py` runs each pass file with `runpy.run_path(..., init_globals={"PARAMS": P})`; entry point is now `runpy.run_path(r"<scripts>/blender/run_all.py", init_globals={"PARAMS": {...}})["result"]`.
+
+## 1.2.0 (2026-11-06)
+- Video resolution question: 1920×1080, 1600×900 (recommended) or 1280×720, each with its estimated render time for 15 / 30 / 60 s (RTX 4060 reference; 1600×900 measured, the others scaled by pixel count). Asked in the approval gate and in `/drone-video`; the estimate is replaced by the measured test-frame time before launching.
 
 ## 1.1.2 (2026-11-03)
 - **Packaging (plugin review):**
