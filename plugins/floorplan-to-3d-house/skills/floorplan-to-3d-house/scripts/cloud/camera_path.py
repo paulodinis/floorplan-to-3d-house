@@ -15,7 +15,7 @@ The preview shows the orbit and, per storey, the walk on the same 2 m reference 
 --order rooms to visit first, in this order, where the layout allows it
 --radius / --height / --cw  orbit distance from the house centre (m), camera height (m), clockwise
 """
-import json, math, sys, argparse
+import json, math, sys, argparse, os
 
 ap = argparse.ArgumentParser()
 ap.add_argument('layout'); ap.add_argument('seconds', type=float); ap.add_argument('out')
@@ -32,6 +32,7 @@ L = json.load(open(A.layout, encoding='utf-8'))
 FPS, SEC = A.fps, A.seconds
 F = int(round(SEC * FPS))
 EYE, LOOK, CLEAR = 1.6, 1.3, 0.25          # eye height, look height, wall clearance (m)
+THRESHOLD = float(os.environ.get('CAM_THRESHOLD', '0.25'))   # stops: eye this far inside the doorway (0 = stay 0.8 m back, as before 1.5.2)
 WALK, DWELL, DOOR_T = 1.2, 1.2, 1.0         # m/s, s at each doorway, s for a door to swing
 
 # ---------- geometry ----------
@@ -193,7 +194,15 @@ def visit(room, pos, came):
         if op['kind'] in ('door', 'front'): EV.append(('door', op, nxt))
         visited.add(id(nxt))
         if nxt['name'].lower() not in SKIP:
-            tour.append(nxt['name']); EV.append(('dwell', (appr, st_of(room)), nxt))
+            tour.append(nxt['name'])
+            if op['kind'] in ('door', 'front', 'open') and THRESHOLD > 0:
+                # step onto the threshold to look in: from 0.8 m back, a narrow doorway shows only jambs and walls
+                thr = side_pt(op, nxt, THRESHOLD)
+                EV.append(('move', [(appr, st_of(room)), (thr, st_of(nxt))]))
+                EV.append(('dwell', (thr, st_of(nxt)), nxt))
+                EV.append(('move', [(thr, st_of(nxt)), (appr, st_of(room))]))
+            else:
+                EV.append(('dwell', (appr, st_of(room)), nxt))
         if walkable(op) and has_unvisited(nxt, op):
             inn = side_pt(op, nxt, 0.8)
             via = op.get('via', [])

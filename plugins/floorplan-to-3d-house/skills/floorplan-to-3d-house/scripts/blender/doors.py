@@ -7,6 +7,7 @@ import bpy, bmesh, math
 from mathutils import Vector, Matrix
 P = globals().get("PARAMS") or {}
 DOORS = P.get('doors') or []
+CAM = sorted(P.get('camera_keys') or [], key=lambda k: k[0])   # [frame, eye, target] in scene coords
 S2B = lambda x, y, z: Vector((x, -z, y))                 # scene (x east, y up, z south) -> Blender (Z up)
 SWING = math.radians(95); DUR = 25
 log = []
@@ -25,18 +26,26 @@ def _remove_verts(ob, idx):
     bmesh.ops.delete(bm, geom=[bm.verts[i] for i in idx], context='VERTS'); bm.to_mesh(ob.data); bm.free()
 
 def split_loose(ob):
-    """loose parts of a mesh -> separate objects (no edit-mode operators: works in background Blender)"""
+    """loose parts of a mesh -> separate objects (no edit-mode operators: works in background Blender).
+    The GLB export writes flat-shaded boxes with split vertices (each face its own vertices), so parts are
+    connected by shared edges OR by coincident vertex positions; otherwise one leaf breaks into 6-12 faces."""
     bm = bmesh.new(); bm.from_mesh(ob.data); bm.verts.ensure_lookup_table()
-    seen, comps = set(), []
+    par = list(range(len(bm.verts)))
+    def find(a):
+        while par[a] != a: par[a] = par[par[a]]; a = par[a]
+        return a
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb: par[ra] = rb
+    for e in bm.edges: union(e.verts[0].index, e.verts[1].index)
+    first = {}
     for v in bm.verts:
-        if v.index in seen: continue
-        stack, comp = [v], set()
-        while stack:
-            u = stack.pop()
-            if u.index in comp: continue
-            comp.add(u.index)
-            stack += [e.other_vert(u) for e in u.link_edges if e.other_vert(u).index not in comp]
-        seen |= comp; comps.append(comp)
+        k = (round(v.co.x, 4), round(v.co.y, 4), round(v.co.z, 4))
+        if k in first: union(v.index, first[k])
+        else: first[k] = v.index
+    groups = {}
+    for v in bm.verts: groups.setdefault(find(v.index), set()).add(v.index)
+    comps = list(groups.values())
     bm.free()
     if len(comps) <= 1: return [ob]
     parts = [_sub_object(ob, comp, f'{ob.name}.{i:03d}') for i, comp in enumerate(comps)]
@@ -70,7 +79,30 @@ if DOORS:
         if not best: log.append(('no leaf', d['kind'], round(d['x'], 2), round(d['z'], 2))); continue
         _, o, lo, hi = best; used.add(o.name)
         along_x = (hi.x - lo.x) >= (hi.y - lo.y)
-        hinge = Vector((lo.x, (lo.y + hi.y) / 2, lo.z)) if along_x else Vector(((lo.x + hi.x) / 2, lo.y, lo.z))
+        tw = S2B(d['toward'][0], 0, d['toward'][1])
+        mid = (lo + hi) / 2
+        def swung(hinge, sign):
+            r = Matrix.Rotation(sign * SWING, 4, 'Z'); q = r @ (mid - hinge) + hinge
+            return q, (q.x - c.x) * (tw.x - c.x) + (q.y - c.y) * (tw.y - c.y)
+        def best_sign(hinge): return 1 if swung(hinge, 1)[1] > swung(hinge, -1)[1] else -1
+        hinges = ([Vector((lo.x, (lo.y + hi.y) / 2, lo.z)), Vector((hi.x, (lo.y + hi.y) / 2, lo.z))] if along_x
+                  else [Vector(((lo.x + hi.x) / 2, lo.y, lo.z)), Vector(((lo.x + hi.x) / 2, hi.y, lo.z))])
+        # hinge side: keep the open leaf out of the camera's line of sight when it looks into the room
+        look = [k for k in CAM if int(d['frame']) + DUR <= k[0] <= int(d['frame']) + DUR + 150]
+        def clearance(hinge):
+            if not look: return 0.0
+            q, _ = swung(hinge, best_sign(hinge)); far = 2 * q - hinge     # open leaf: middle and free edge
+            # the key where the camera stands at this doorway looking into the room (target on the `toward` side)
+            into = [k for k in look if (S2B(*k[2]).x - S2B(*k[1]).x) * (tw.x - c.x) + (S2B(*k[2]).y - S2B(*k[1]).y) * (tw.y - c.y) > 0]
+            holds = [k for k in into if any(k2[0] != k[0] and k2[1] == k[1] and k2[2] == k[2] for k2 in look)]   # the camera pauses there
+            k = holds[0] if holds else min(into or look, key=lambda k: (S2B(*k[1]) - c).xy.length)
+            a_, b_ = S2B(*k[1]), S2B(*k[2])
+            def dist(p):
+                vx, vy = b_.x - a_.x, b_.y - a_.y; L2 = vx * vx + vy * vy or 1e-9
+                t = max(0.0, min(1.0, ((p.x - a_.x) * vx + (p.y - a_.y) * vy) / L2))
+                return math.hypot(p.x - a_.x - t * vx, p.y - a_.y - t * vy)
+            return min(dist(q), dist(far))
+        hinge = max(hinges, key=clearance)
         set_origin(o, hinge)                             # pivot on the hinge first, then attach the handle
         if d['kind'] == 'front':                         # handle box: a small frame-material part on the leaf
             for fo in frames:
@@ -80,12 +112,7 @@ if DOORS:
                 if sel and len(sel) <= 16:
                     h = _sub_object(fo, sel, 'Front_Door_Handle'); _remove_verts(fo, sel)
                     hm = h.matrix_world.copy(); h.parent = o; h.matrix_world = hm
-        tw = S2B(d['toward'][0], 0, d['toward'][1])
-        mid = (lo + hi) / 2
-        def swung(sign):
-            r = Matrix.Rotation(sign * SWING, 4, 'Z'); q = r @ (mid - hinge) + hinge
-            return (q.x - c.x) * (tw.x - c.x) + (q.y - c.y) * (tw.y - c.y)
-        sign = 1 if swung(1) > swung(-1) else -1
+        sign = best_sign(hinge)
         o.rotation_mode = 'XYZ'; o.animation_data_clear()
         f = int(d['frame'])
         o.rotation_euler.z = 0.0; o.keyframe_insert('rotation_euler', index=2, frame=f)

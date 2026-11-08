@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.5.3 (2026-11-08)
+- **Fix `doors.py`: doors on the camera path did not open.** The GLB writes flat-shaded boxes with split vertices, so splitting by edges cut each leaf into 6–12 separate faces and only one face swung. Loose parts are now grouped by shared edges *or* coincident vertex positions. Checked in a render: the front door of a test house opens fully.
+- The threshold stops and hinge-side choice from 1.5.2 are confirmed in renders.
+
+## 1.5.2 (2026-11-08)
+- **Blender MCP on Windows:** when Smart App Control blocks the `uvx`-built `blender-mcp.exe` ("Connection closed"), run the server with the signed Python (`py -c "from blender_mcp.server import main; main()"`) in `claude_desktop_config.json`. Documented in Step 7b and `references/blender-pipeline.md`.
+- `camera_path.py`: each stop now steps onto the threshold (`CAM_THRESHOLD`, 0.25 m into the room; 0 = previous behaviour). From 0.8 m back, narrow doorways showed only jambs and walls. *Not yet checked in a render.*
+- `doors.py`: picks the hinge side that keeps the open leaf out of the camera's view when it looks into the room. *Not yet checked in a render.*
+
+## 1.5.1 (2026-11-08)
+- **Step 7b asks before launching Blender:** "Open the 3D model in Blender on your computer?", with the options "Yes" / "I don't have Blender" / "Not now". When computer use is available it checks the install first and shows the result (e.g. "Blender 5.2 found"), but it still asks. "I don't have Blender" skips Step 7b and the video, and points to the GLB and to blender.org. The question is asked once per session.
+
+## 1.5.0 (2026-11-08)
+- **New Step 7b: open the finished 3D in Blender.**
+  - Right after the exports, the skill opens the model in Blender on the user's PC, without asking; it is not the video and needs no approval.
+  - It runs through the Blender MCP when connected. Otherwise it types into an open Blender's Python console with computer use, or writes a `.bat`/`.command` launcher.
+- New `scripts/blender/open_in_blender.py`:
+  - strips `KHR_materials_volume`, clears the scene and imports the GLB;
+  - looks through the aerial camera in Material Preview and saves `<name>.blend` next to the GLB;
+  - starts the MCP add-on server, either BlenderMCP or the "MCP" extension (`blmcp.server_start`);
+  - writes `<name>_blender_open.json`.
+  - Tested on Blender 5.2 (Windows) with a 30 MB GLB of 4,230 objects.
+- Troubleshooting note: if the add-on server is running and the Blender MCP still reports "Connection closed", Windows Smart App Control may be blocking `uvx`/`blender-mcp.exe` on the client side.
+
 ## 1.4.0 (2026-11-07)
 - **Every video is a 360° orbit of the house**, starting and ending on the front-door side, above the tree crowns.
 - **60 s video = orbit + the house from inside:** the camera comes down to the front door, the door opens, and it walks every storey (climbing straight stairs) to the doorway of every space, looking in; each door on the way opens toward the room, glass sliding doors are looked through. Open-plan rooms with no wall between them are linked.

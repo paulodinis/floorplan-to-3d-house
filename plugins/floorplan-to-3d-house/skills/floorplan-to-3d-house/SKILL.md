@@ -5,10 +5,10 @@ description: >
   "make a 3D model of my house", "convert this plan to DXF", "redesign this house on my plot",
   "show me the house in 3D", "walk through the house", "export the plan to GLB" or "make a drone video of the house",
   or types /floorplan-to-3d-house. Runs the full workflow: DXF, simplified 2D plan for approval, interactive 3D page,
-  GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, optional Blender video.
+  GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, opens the model in Blender, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.4.0"
+  version: "1.5.3"
 ---
 
 # Floor plan → DXF → 2D plan (approval) → 3D model → video
@@ -52,7 +52,7 @@ Paths below are relative to this skill's base directory (shown when the skill lo
   - `gaps.py`: openings detection, faithful mode
   - `tex.py`: procedural textures
 - `scripts/web/`: `template.html`, `engine.js` (three.js r160, Orbit/Walk/Drone navigation, sun study), `export_glb.js`, `i18n.json`, `tex/`.
-- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `doors.py`, `style.py`, `haze.py`, `final.py`, `encode.py`).
+- `scripts/blender/`: the Blender 4.2+/5.x pipeline (`run_all.py` + passes, `doors.py`, `style.py`, `haze.py`, `final.py`, `encode.py`) and `open_in_blender.py` (opens the finished GLB in Blender, Step 7b).
 - `styles/`: style presets (`portuguese-contemporary`, `white-minimal`, `rural-stone`, `nordic-timber`).
 - `examples/`: a complete reference project with `project.json`, `site.json`, `layout.json`, masks and `layout_generator_example.py`. Run it once to see the expected outputs. `examples/two-storey/` is the same site with a two-storey house (stair void, railings, balcony).
 - `references/`: read these when the step needs them.
@@ -165,6 +165,18 @@ Zip:
 
 Explain that AI video tools don't take GLB and don't keep dimensions. Use the renders or the video as references.
 
+## Step 7b. Open the 3D in Blender (after every finished 3D)
+Right after Step 7, offer to open the model in Blender on the user's PC; it is not the video. Skip this step if no PC is linked (then say the GLB is in the zip).
+0. **Ask first: the user may not have Blender.** Before putting anything on the PC or launching anything, ask one AskUserQuestion: "Open the 3D model in Blender on your computer?" Options:
+   - "Yes, open it in Blender (Recommended)": go on with 1.
+   - "I don't have Blender": skip this step and Step 8. Say the GLB in the zip opens in any glTF viewer, and that Blender is free (blender.org) if they want it later.
+   - "Not now": skip; the GLB is in the zip.
+   When computer use is available, check the install with `computer_resolve_access(["Blender"])` (it lists Blender versions under `didYouMean`, or nothing) and put the result in the question, e.g. "Blender 5.2 found". Still ask; detection doesn't replace the answer. Ask once per session: after "I don't have Blender" or "Not now", don't ask again for later versions unless the user brings it up. After a "Yes", open later versions without asking again. Never treat silence as yes.
+1. Put the GLB and `scripts/blender/open_in_blender.py` side by side in the project folder on the PC.
+2. Run the script: through the Blender MCP if connected; else in an open Blender's Python console via computer use (only if its scene is empty or saved: the script clears it); else with a `.bat`/`.command` launcher. Exact commands in `references/blender-pipeline.md` ("Open the model in Blender").
+3. It imports the GLB (without `KHR_materials_volume`), looks through the aerial camera in Material Preview, saves `<name>.blend` next to the GLB, starts the MCP add-on server if one is enabled and writes `<name>_blender_open.json`. Read it, take one screenshot to confirm, and tell the user where the `.blend` is.
+4. If the add-on server runs but the Blender MCP still says "Connection closed", the client side is not starting. On Windows, Smart App Control blocks the unsigned `blender-mcp.exe` that `uvx` builds, and it has no per-app allow list. Fix: run the server with the signed Python instead (`py -m pip install blender-mcp`, then point the "blender" entry of `claude_desktop_config.json` at `py -c "from blender_mcp.server import main; main()"`, then restart the Claude app). See `references/blender-pipeline.md` ("Blender MCP on Windows"). The user edits that config: Claude's own settings folder is not granted to the session.
+
 ## Step 8. Blender video (optional, only if the user asked)
 Skip this step, and ask nothing about it, when the user chose the model only (see Step 5).
 See `references/blender-pipeline.md`.
@@ -188,7 +200,7 @@ See `references/blender-pipeline.md`.
 
 ## Closing summary
 - What was done.
-- Where the files are.
+- Where the files are, including the `.blend` opened in Step 7b.
 - Measured vs inferred.
 - What to validate with a professional: local plan and ratios, setbacks, structure of retaining walls, heights.
 

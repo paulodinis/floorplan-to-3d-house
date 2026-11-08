@@ -55,3 +55,32 @@ When quoting, show the row for the chosen length and replace the estimate with t
    - start the watcher: `CS_DIR=<dir> CS_TOTAL=<frames> CS_OUT=<name>_ blender -b --factory-startup --python encode.py`, which writes the MP4 (H.264) and `<name>_DONE.txt`;
    - schedule a check, if the host supports it;
    - tell the user to keep the PC awake.
+
+
+## Open the model in Blender (Step 7b)
+`scripts/blender/open_in_blender.py` takes the GLB and the `.blend` to write, either after `--` on the command line or as `ARGS` in `init_globals`.
+- **Blender MCP connected:** `import runpy; runpy.run_path(r"<dir>/open_in_blender.py", init_globals={"ARGS": [r"<dir>/<name>.glb", r"<dir>/<name>.blend"]})`.
+- **Blender open, MCP not connected (computer use):** grant Blender (on Windows the window belongs to `blender.exe`, not `blender-launcher.exe`). Click the 3D view, press `Shift+F4` (Python console) and type the line below, wrapped in a timer so the 3D view is back when it runs. Press Enter, then `Shift+F5`:
+  `import bpy, runpy; bpy.app.timers.register(lambda: runpy.run_path(r"<dir>/open_in_blender.py", init_globals={"ARGS": [r"<dir>/<name>.glb", r"<dir>/<name>.blend"]}) and None, first_interval=3.0)`
+  The script clears the scene: only do this when the open scene is empty or saved.
+- **Blender closed:** write a launcher next to the GLB and open it with computer use (File Explorer is click-only: double-click it) or ask the user to double-click it.
+  - Windows `open_<name>_blender.bat`: `start "" "C:\Program Files\Blender Foundation\Blender <ver>\blender.exe" --python "<dir>\open_in_blender.py" -- "<dir>\<name>.glb" "<dir>\<name>.blend"`.
+  - macOS `.command`: `/Applications/Blender.app/Contents/MacOS/Blender --python ...`.
+  - Ask for the Blender path if it isn't there.
+- **MCP add-on:** the script calls the first `start` operator it finds in an `*mcp*` operator namespace: BlenderMCP `blendermcp.start_server`, or the "MCP" extension `blmcp.server_start`. "Server is already running" counts as started.
+- **Output:** `<name>_blender_open.json` with `objects`, `camera`, `blend` and `mcp`.
+
+
+## Blender MCP on Windows (Smart App Control)
+Symptom: the Blender add-on server is running ("Server is already running"), but the client in the Claude app stays "failed / Connection closed". Windows Security shows "Part of this app has been blocked … can't confirm who published blender-mcp.exe" (under `uv-runtime`).
+Cause: Smart App Control blocks the unsigned `blender-mcp.exe` launcher that `uvx` generates. It has no per-app allow list, and approving the notification does not stick.
+Fix (keeps Smart App Control on): run the same server through the signed Python interpreter.
+1. `py -m pip install blender-mcp` (or `python -m pip install --user blender-mcp`).
+2. Claude app → Settings → Developer → Edit config (`%APPDATA%\Claude\claude_desktop_config.json`). The "blender" entry becomes:
+   ```json
+   "blender": { "command": "py", "args": ["-c", "from blender_mcp.server import main; main()"] }
+   ```
+   Use the full path of `python.exe` if `py` is missing.
+3. Quit the Claude app completely (tray icon → Quit) and reopen it. In Blender, start the add-on server.
+The user makes the config edit. The session cannot open Claude's settings folder, and must not try to edit it through Blender or another process.
+`blender-mcp` speaks the BlenderMCP add-on protocol (ahujasid/blender-mcp `addon.py`, "Connect to Claude"). If another MCP extension is installed instead (e.g. the "MCP" extension, `blmcp.server_start`), the client may connect and drop: install the BlenderMCP add-on.

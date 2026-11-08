@@ -10,7 +10,8 @@ Turn a house **site plan or floor plan** (vector PDF or DXF) into:
    - areas panel;
 4. **exports**: GLB (glTF), a 3D DXF (one layer per material) and five reference renders, plus a prompt pack for AI image and video tools;
 5. **elevations and a section** (PNG sheet + DXF) and a **sun & daylight report**: direct-sun hours per room and ground sun maps for the equinox and both solstices;
-6. optionally, a **photoreal drone video** rendered on your own machine with Blender (Cycles), including a walkthrough with doors opening.
+6. the model **opened in Blender** on your machine, if you say yes when asked (it checks that Blender is installed), saved as a `.blend` ready to explore or edit;
+7. optionally, a **photoreal drone video** rendered on your own machine with Blender (Cycles), including a walkthrough with doors opening.
 
 It works as a conversation: Claude asks a few questions, shows the 2D plan, waits for your **approval**, and only then builds the 3D and the video.
 
@@ -27,7 +28,7 @@ It works as a conversation: Claude asks a few questions, shows the 2D plan, wait
 ## What's inside
 | Skill | Use it for |
 |---|---|
-| `/floorplan-to-3d-house` | The full workflow: intake → DXF → 2D plan for approval → 3D page → exports → optional video. It also triggers on its own when you share a plan. |
+| `/floorplan-to-3d-house` | The full workflow: intake → DXF → 2D plan for approval → 3D page → exports → model opened in Blender → optional video. It also triggers on its own when you share a plan. |
 | `/validate-plan` | Re-run the design QA (setbacks, stairs, doors, room sizes, area cap) and regenerate the 2D approval plan for an existing project. |
 | `/drone-video` | Make or redo the Blender drone / walkthrough video for an approved project (15 s, 30 s or 60 s, with doors opening). |
 
@@ -48,7 +49,7 @@ Put the plugin in `plugins/floorplan-to-3d-house/` and add `.claude-plugin/marke
   "owner": { "name": "Paulo Silva" },
   "plugins": [
     { "name": "floorplan-to-3d-house", "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.4.0" }
+      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.5.3" }
   ]
 }
 ```
