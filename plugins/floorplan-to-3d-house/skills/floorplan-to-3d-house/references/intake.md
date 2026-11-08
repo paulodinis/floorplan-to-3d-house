@@ -27,22 +27,10 @@ Use AskUserQuestion: at most 4 questions per call and 2–4 options each; "Other
 - **Slope:** split levels (Recommended) / one platform with retaining walls / a basement garage.
 - **Must-keep items:** existing trees, walls, access position.
 
-## Approval gate (Step 5): one call, two or three questions
-- **Approve the 2D plan?**
-  - "Approved, go to 3D"
-  - "Approved with small changes (describe in Other)"
-  - "Change and show again"
-- **Blender video?** Only ask this if Blender + the MCP add-on is available, and never when the user already chose the model only ("só a maqueta", "just the 3D model", "no video"); then the gate is the approval question alone, and no length, resolution or time question follows.
-  - "No"
-  - "15 s (Recommended)": 360° orbit of the house
-  - "30 s": slower 360° orbit
-  - "60 s: 360° + inside": orbit, then the front door opens and the camera goes to the doorway of every space
-  - Quote time = frames × measured s/frame. The reference GPU (RTX 4060) does 1600×900 at 24 samples in about 25–31 s per frame.
-- **Video resolution?** Ask together with the length, only if a video was requested. Show the estimated time for the chosen length in each option (table in `references/blender-pipeline.md`), for example for 15 s:
-  - "1600×900 (Recommended)": ~31 s/frame, ~3 h 15
-  - "1920×1080 (Full HD)": ~45 s/frame, ~4 h 40
-  - "1280×720 (faster)": ~20 s/frame, ~2 h 05
-  - Say the times are estimates for an RTX 4060 and get corrected after a measured test frame.
+## Approval gate (Step 5): one question
+- **Continue to 3D?** "Yes" / "Change the plan (describe; grid cells welcome)" / "Stop here".
+- Video length and resolution are not asked here: `drone-video` asks them, once, when the user wants a video. "Open in Blender?" is asked after the 3D (Step 7b), once per session.
+- A request with two readings ("same height", "attach", "centre the entrance"): ask with the readings as options before drawing.
 
 ## Handling answers
 - **Style photos:** extract a palette with style-guide.md and confirm it in one line. Don't ask the style question.

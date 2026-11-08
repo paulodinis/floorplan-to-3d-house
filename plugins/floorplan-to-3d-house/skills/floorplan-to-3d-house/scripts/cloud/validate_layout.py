@@ -170,6 +170,39 @@ for w in L['walls']:
         if low and not any(guarded(cx + sx * -uz * 0.2, cz + sx * ux * 0.2, w['y0'], walls=False) for sx in (1, -1)):   # a railing in front or behind
             WARN.append(f'Upper-floor {o["kind"]} {o["w"]:.2f} m in wall {w.get("tag") or w["a"]}: sill {o.get("sill", 0):.2f} m, no balcony floor or railing (needs ≥ {Q["upper_sill_min"]} m sill or a guard)')
 
+# furniture: nothing in a door swing, in front of a low window / sliding door / front door, or blocking an opening
+def _block_at(x, z):
+    for b in L.get('blocks', {}).values():
+        x0, z0, x1, z1 = b['rect']
+        if x0 - 0.05 <= x <= x1 + 0.05 and z0 - 0.05 <= z <= z1 + 0.05: return b
+_zones = []
+for w in L['walls']:
+    (ax, az), (bx, bz) = w['a'], w['b']; Lw = math.dist(w['a'], w['b'])
+    if Lw < 1e-6: continue
+    ux, uz = (bx - ax) / Lw, (bz - az) / Lw; nx, nz = -uz, ux; t = w.get('t', 0.2)
+    for o in w.get('ops', []):
+        s0, e0, k = o['o'], o['o'] + o['w'], o['kind']; mid = s0 + o['w'] / 2
+        sides = [sg for sg in (1, -1) if (lambda b: b and not any(k in b['name'].lower() for k in ('alpendre', 'porch', 'terrace', 'terraço')))(_block_at(ax + ux * mid + nx * sg * 0.6, az + uz * mid + nz * sg * 0.6))]
+        if k == 'door': depth, use, what = o['w'], [1 if 1 in sides or not sides else -1], 'in a door swing'
+        elif k in ('window', 'slide', 'door_glass', 'front'):
+            if o.get('sill', 0) >= 1.4: continue
+            depth, use, what = (1.1, sides or [1], 'in the front-door swing') if k == 'front' else (0.5, sides or [1], 'in front of a ' + ('window' if k == 'window' else 'glazed door'))
+        elif k == 'open': depth, use, what = 0.6, [1, -1], 'in an opening'
+        else: continue
+        for sg in use:
+            pts = [(ax + ux * u + nx * sg * v, az + uz * u + nz * sg * v) for u in (s0, e0) for v in (t / 2, t / 2 + depth)]
+            _zones.append(((min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)), w.get('y0', 0), k, o, what))
+_bad = 0
+for fu in L.get('furniture', []):
+    if fu.get('mat') == 'rug' or fu.get('h', 0) < 0.06: continue
+    fb = fu['b']
+    for (r, y0, k, o, what) in _zones:
+        if abs(fu.get('y0', 0) - y0) > 0.35: continue
+        if not (fb[0] < r[2] - 0.02 and r[0] < fb[2] - 0.02 and fb[1] < r[3] - 0.02 and r[1] < fb[3] - 0.02): continue
+        if k == 'window' and fu.get('h', 0) <= o.get('sill', 0) - 0.1 and any(n in fu.get('name', '').lower() for n in ('bancada', 'counter', 'máquinas', 'sink')): continue
+        _bad += 1; WARN.append(f'Furniture "{fu.get("name") or fu.get("mat")}" {fu["b"]} is {what} ({o["kind"]} {o["w"]} m)')
+if L.get('furniture') and not _bad: OK.append('Furniture: clear of door swings and low windows')
+
 lines = [f'# Layout QA — {P.get("name", "")}', '', f'{len(ERR)} error(s), {len(WARN)} warning(s), {len(OK)} check(s) passed.',
          '', '_Generic good-practice thresholds, not a building-code check._', '']
 for title, items in (('Errors', ERR), ('Warnings', WARN), ('Passed', OK)):

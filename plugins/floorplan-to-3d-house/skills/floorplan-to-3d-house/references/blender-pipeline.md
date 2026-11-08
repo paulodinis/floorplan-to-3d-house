@@ -1,7 +1,7 @@
 # Blender drone video (Blender 4.2+ / 5.x, Cycles)
 
 Requirements:
-- Blender with the official Blender MCP add-on (Server started) on the user's machine;
+- Blender with an MCP add-on (server started) on the user's machine, reachable through the Blender MCP;
 - a GPU (OptiX / CUDA / HIP / Metal);
 - the project folder on that machine.
 
@@ -84,3 +84,49 @@ Fix (keeps Smart App Control on): run the same server through the signed Python 
 3. Quit the Claude app completely (tray icon → Quit) and reopen it. In Blender, start the add-on server.
 The user makes the config edit. The session cannot open Claude's settings folder, and must not try to edit it through Blender or another process.
 `blender-mcp` speaks the BlenderMCP add-on protocol (ahujasid/blender-mcp `addon.py`, "Connect to Claude"). If another MCP extension is installed instead (e.g. the "MCP" extension, `blmcp.server_start`), the client may connect and drop: install the BlenderMCP add-on.
+
+
+## One launcher: `scripts/blender/pipeline.py` (1.6.0)
+One MCP call starts it detached, then poll one small JSON. It replaces the per-project driver scripts.
+```python
+# in execute_blender_code (live session); Windows flags = detached + no console window
+import subprocess, sys, bpy
+subprocess.Popen([sys.executable, r"<scripts_dir>\pipeline.py", "test", r"<dir>\params.json", bpy.app.binary_path],
+                 creationflags=0x00000008 | 0x08000000, close_fds=True)
+```
+- `build`: GLB → all passes (`run_all.py`) → `<blend>`.
+- `test`: build, then 8 frames spread over the video + the frame after each door opens, at 50 % / 48 samples. Writes one contact sheet `tests/sheet.jpg` (4 columns, 480 px tiles; the red bar on top shows the position in the video), `tests/times.json` and `s_per_frame_est` (×4 pixels, ×samples/48). `"test_frames": [..]` in params.json to re-test only some frames.
+- `final`: build, start `encode.py` (waits for the frames, writes `<video_name>*.mp4` and `<video_name>DONE.txt`), render all frames. While rendering it keeps `frames_done`, measured `s_per_frame` and `eta_h` up to date.
+- `check`: print the status (no Blender).
+- Status `<dir>/pipeline_status.json`: `mode`, `stage`, `ok`, `error`, `build` (the `run_all.py` result, including `doors.py` → `missing` / `suspicious`), `test`, `s_per_frame_est`, `frames_done`, `eta_h`, `mp4`. Logs `pipeline_<stage>.log` only when the status shows an error.
+- `blender-launcher.exe` is swapped for `blender.exe` next to it (the launcher returns at once).
+
+## The user's own camera path: `scripts/cloud/camera_script.py` (1.6.0)
+Turn a shot list in words into steps in `path.json`; durations are relative and scaled to `seconds`. Example (90 s, Casa Sobreiral v15):
+```json
+{"seconds": 90, "steps": [
+ {"do": "start", "dist": 4, "eye": 1.2, "t": 1.5, "label": "Low, facing the front door"},
+ {"do": "orbit_in", "radius": 27, "height": 13, "t": 5.5}, {"do": "orbit", "deg": 360, "t": 22},
+ {"do": "to_door", "t": 4}, {"do": "move", "to": {"room": "Hall"}, "t": 2},
+ {"do": "move", "to": {"room": "Suite", "frac": 0.6}, "via": [{"xz": [-6.9, -0.57]}], "t": 3.5},
+ {"do": "pivot", "deg": 45, "t": 1.5}, {"do": "pivot", "deg": -90, "t": 2},
+ {"do": "move", "to": {"room": "Suite bathroom"}, "via": [{"room": "Closet"}], "t": 4.5},
+ {"do": "pivot", "deg": 180, "t": 1.5}, {"do": "move", "to": {"stair": "top"}, "t": 4},
+ {"do": "stairs", "t": 2.5}, {"do": "forward", "m": 1.5, "t": 1.5},
+ {"do": "turn_to", "look": {"xz": [6.5, -3.4]}, "t": 2}, {"do": "spin", "deg": 360, "radius": 0.5, "t": 7.5},
+ {"do": "move", "to": {"xz": [9, 5]}, "t": 3.5}, {"do": "rise", "up": 1, "back": 3, "look": {"xz": [8.2, 4.2]}, "t": 3},
+ {"do": "strafe", "to": {"xz": [18, 3.2]}, "via": [{"xz": [13.6, 9.2]}], "look": {"xz": [14.4, -3.3]}, "t": 4.5},
+ {"do": "aerial", "height": 40, "t": 4.5}]}
+```
+Lessons from that video:
+- From 0.8 m back, a narrow doorway shows only jambs: step onto the threshold.
+- Small rooms (closets of 1.2 m, a 1.5 m bathroom) show mostly walls: keep them short, or skip them.
+- Leaving through glass is allowed but listed in `checks`: say so to the user.
+- Keep the eye under eaves (≈ 2.4 m above a porch floor) or the roof fills the frame.
+- Go round columns with a `via` point.
+- Look back at the house after stepping outside, not at the lawn.
+
+## Blender MCP (troubleshooting)
+- Live session: "Cannot connect to Blender at localhost:9876". Blender is closed, or its MCP add-on server isn't started. Ask the user to open Blender and start the add-on server.
+- Background mode (`execute_blender_code_for_cli`) needs `BLENDER_PATH` in the MCP's settings. `pipeline.py` doesn't need it: it takes the executable from `bpy.app.binary_path` of the live session.
+- Doors that open only in part: `doors.py` groups loose parts by shared edges *and* coincident vertices (the GLB writes split vertices); `suspicious` in its result lists leaves whose size doesn't match the opening.

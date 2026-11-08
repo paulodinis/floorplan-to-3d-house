@@ -5,7 +5,7 @@ description: >
   "run the design QA", "check setbacks / stairs / room sizes", "regenerate the 2D plan" or types /validate-plan
   on a project made with floorplan-to-3d-house (a work dir with site3d/layout.json and project.json).
 metadata:
-  version: "1.5.3"
+  version: "1.6.0"
 ---
 
 # Validate a house layout and regenerate the 2D approval plan
@@ -22,10 +22,11 @@ Reply in the user's language. Label confidence as [Certain], [Likely] or [Assump
 3. **Regenerate the plan DXF:** `PROJECT_JSON=project.json python3 <FT>/scripts/cloud/plan2d.py export/plan.dxf /tmp/x.png`. If ezdxf is missing, run `bash <FT>/scripts/setup_workspace.sh` first.
 4. **Regenerate the approval PNG and add setbacks and north to the DXF:** `PROJECT_JSON=project.json python3 <FT>/scripts/cloud/plan2d_simple.py site3d/layout.json site3d/site.json export/plan_vN.png export/plan.dxf site3d/tex/mask1.png`. Increment N from the last plan in `export/`.
    - **Two storeys** (elements with `"storey"`): one plan per storey. First `python3 <FT>/scripts/cloud/storey_filter.py site3d/layout.json <k> site3d/layout_s<k>.json --label "<storey name>"`, then steps 3–4 with `LAYOUT_JSON=site3d/layout_s<k>.json` for plan2d.py, `site3d/layout_s<k>.json` as the layout argument of plan2d_simple.py, and `plan_s<k>` file names.
-5. **Look at the PNG with Read** before sending it. Check:
+5. **Read `export/plan_vN.check.png`** (the small crop of the buildings, not the full PNG) before sending. Check:
    - overlapping labels;
    - door swings into walls;
-   - orange setbacks (below the minimum).
+   - orange setbacks (below the minimum);
+   - furniture in door swings or in front of low windows (also listed in `qa.md`).
 6. **Deliver** the PNG, the DXF and `qa.md`. Summarise in 3–6 lines:
    - errors first, each phrased as a decision for the user (move, accept, ask the architect);
    - then warnings;

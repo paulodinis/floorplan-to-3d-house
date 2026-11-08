@@ -1,0 +1,15 @@
+{"seconds": 60, "fps": 25, "steps": [
+ {"do": "start", "dist": 4.0, "eye": 1.2, "t": 1.5, "label": "Low, facing the front door"},
+ {"do": "orbit_in", "t": 4, "label": "Rise until the whole house is in view"},
+ {"do": "orbit", "deg": 360, "t": 18, "label": "360° around the house"},
+ {"do": "to_door", "t": 3.5, "label": "Down to the front door"},
+ {"do": "move", "to": {"room": "Entrance hall"}, "t": 2, "label": "Step in"},
+ {"do": "move", "to": {"room": "Main bedroom", "frac": 0.6}, "via": [{"room": "Corridor"}], "t": 4, "label": "Into the main bedroom"},
+ {"do": "pivot", "deg": 60, "t": 2, "label": "Look around"},
+ {"do": "pivot", "deg": -150, "t": 2.5},
+ {"do": "move", "to": {"stair": "top"}, "via": [{"room": "Corridor"}], "t": 4, "label": "To the stair"},
+ {"do": "stairs", "t": 2.5, "label": "Down the stair"},
+ {"do": "forward", "m": 1.5, "t": 1.5, "label": "Into the living room"},
+ {"do": "spin", "deg": 360, "radius": 0.5, "t": 6, "label": "Turn round the living room"},
+ {"do": "aerial", "t": 4, "label": "Pull up over the house"}
+]}

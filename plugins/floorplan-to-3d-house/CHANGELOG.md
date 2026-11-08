@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.6.0 (2026-11-08)
+Fewer tokens per project, same flow and the same approval stops.
+- **Leaner skills.** `floorplan-to-3d-house/SKILL.md` goes from ~3 400 to ~1 100 words: the flow and its stops stay; the commands move to new references (`inputs.md`, `plan-and-grid.md`, `exports.md`). The video (old Step 8, duplicated) lives only in `drone-video`. All three skills total ~2 200 words, down from ~4 800.
+- **Work files per version:** new `scripts/cloud/pack_work.py` packs layout, site, project, masks, plans and camera paths into `work_v<n>.zip` next to the deliverables. A new session unpacks it instead of rebuilding the project from a published page or the PDF.
+- **Cheap self-checks:**
+  - `plan2d_simple.py` also writes `plan_v<n>.check.png`, a ~1000 px crop of the buildings, for Claude to read;
+  - the full PNG goes only to the user;
+  - renders and test frames are checked as one contact sheet;
+  - reports are read as text.
+- **Furniture on the plan and in the QA:** `plan2d_simple.py` draws the furniture (`PLAN_FURNITURE=0` hides it) and optional `plan_cars`. `validate_layout.py` warns about furniture in door swings, in front of low windows or glazed doors, or in openings.
+- **Your own camera path:** new `scripts/cloud/camera_script.py`. It turns a shot list (`start`, `orbit_in`, `orbit`, `to_door`, `move`, `forward`, `pivot`, `turn_to`, `spin`, `stairs`, `rise`, `strafe`, `aerial`, `hold`; points by room, door, stair or x/z) into camera keys and the doors to open, with a preview PNG. Its `checks` flag glass crossed, walls crossed and eyes too close to a wall.
+- **One Blender launcher:** new `scripts/blender/pipeline.py`, with modes `build`, `test`, `final` and `check`.
+  - It is one detached MCP call; you then poll `pipeline_status.json`.
+  - `test` renders the key frames plus the frame after each door, writes one contact sheet `tests/sheet.jpg` and estimates the time per frame.
+  - `final` renders, encodes and keeps the measured s/frame and the ETA.
+- `doors.py` reports `suspicious` leaves (size does not match the opening).
+- **Flow:**
+  - the approval gate asks one question ("Continue to 3D?");
+  - video length and resolution are asked only in `drone-video`, when a video is wanted;
+  - a change request with two readings is asked with the readings as options before drawing;
+  - a fixed closing summary of 6 lines at most.
+- `export.js … all` runs the GLB and the renders in one browser session; the renders double as the visual check, and `shot2.js` is for debugging only.
+- Elevations and the sun report go with the version approved for 3D, not with every plan revision.
+- `tools/release.sh <version>` bumps the version in every file and builds `dist/floorplan-to-3d-house.plugin`.
+
 ## 1.5.3 (2026-11-08)
 - **Fix `doors.py`: doors on the camera path did not open.** The GLB writes flat-shaded boxes with split vertices, so splitting by edges cut each leaf into 6–12 separate faces and only one face swung. Loose parts are now grouped by shared edges *or* coincident vertex positions. Checked in a render: the front door of a test house opens fully.
 - The threshold stops and hinge-side choice from 1.5.2 are confirmed in renders.

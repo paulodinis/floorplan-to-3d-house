@@ -65,7 +65,7 @@ plot = L['plot']
 xs = [p[0] for p in plot]; zs = [p[1] for p in plot]
 X0, X1, Z0, Z1 = min(xs) - 5, max(xs) + 5, min(zs) - 5, max(zs) + 5
 S = 2400 / (X1 - X0)
-TABLE_H = 330
+TABLE_H = 400                                  # 9+ volumes fit with the total row
 W, H = int((X1 - X0) * S), int((Z1 - Z0) * S) + TABLE_H
 im = Image.new('RGB', (W, H), (255, 255, 255)); d = ImageDraw.Draw(im)
 Q = lambda x, z: ((x - X0) * S, (z - Z0) * S)
@@ -115,6 +115,16 @@ for b in L['blocks'].values():
     d.rectangle([Q(x0, z0), Q(x1, z1)], fill=(246, 240, 226) if open_ else (255, 255, 255))
     if open_: dashed([Q(x0, z0), Q(x1, z0), Q(x1, z1), Q(x0, z1), Q(x0, z0)], (150, 130, 100), 2)
 
+# furniture (light, under the walls) so the user can judge orientation and clearances; PLAN_FURNITURE=0 hides it
+if os.environ.get('PLAN_FURNITURE', '1') != '0':
+    for fu in L.get('furniture', []):
+        if fu.get('y0', 0) > meta.get('storey_y', 0) + 1.5 or int(fu.get('storey', 0)) != int(meta.get('storey', fu.get('storey', 0))): continue
+        x0, z0, x1, z1 = fu['b']; nm = fu.get('name', '').lower(); mt = fu.get('mat', '')
+        if mt == 'rug': dashed([Q(x0, z0), Q(x1, z0), Q(x1, z1), Q(x0, z1), Q(x0, z0)], (200, 200, 200), 1, 5, 5); continue
+        fill = (205, 200, 190) if ('cabeceira' in nm or 'headboard' in nm or mt in ('wardrobe', 'kitchen', 'dark')) else (226, 236, 244) if mt == 'white' else (236, 234, 228)
+        d.rectangle([Q(x0, z0), Q(x1, z1)], fill=fill, outline=(140, 135, 125), width=1)
+    for c in L.get('plan_cars', []):                                   # plan-only car outlines in garages
+        x0, z0, x1, z1 = c; dashed([Q(x0, z0), Q(x1, z0), Q(x1, z1), Q(x0, z1), Q(x0, z0)], (120, 120, 120), 2, 10, 6)
 # walls + openings
 doors = []
 for w in L['walls']:
@@ -300,7 +310,15 @@ if os.environ.get('PLAN_GRID', '1') != '0':
     GRID = dict(x0=gx0, z0=gz0, step=step, cols=ncol, rows=nrow, col_labels=[col_name(i) for i in range(ncol)],
                 note='cell <L><n>: x in [x0+i*step, x0+(i+1)*step], z in [z0+(n-1)*step, z0+n*step]; i = column index from 0; scene x east, z south')
     json.dump(GRID, open(os.path.splitext(OUT)[0] + '.grid.json', 'w'), indent=1)
-im.save(OUT); print('png', im.size, 'setbacks', [round(s[0], 2) for s in setbacks], 'below_min', [round(s[0], 2) for s in setbacks if s[0] < MIN_SB])
+im.save(OUT)
+# small crop of the buildings for Claude's own check (cheap to read); the full PNG is for the user
+rb = [b['rect'] for b in L['blocks'].values()]
+bx0, bz0 = min(r[0] for r in rb) - 3, min(r[1] for r in rb) - 3; bx1, bz1 = max(r[2] for r in rb) + 3, max(r[3] for r in rb) + 3
+(cx0, cy0), (cx1, cy1) = Q(bx0, bz0), Q(bx1, bz1)
+ck = im.crop((max(0, int(cx0)), max(0, int(cy0)), min(W, int(cx1)), min(H - TABLE_H, int(cy1))))
+ck.thumbnail((1000, 1000)); CHECK = os.path.splitext(OUT)[0] + '.check.png'; ck.save(CHECK)
+print('check', CHECK, ck.size)
+print('png', im.size, 'setbacks', [round(s[0], 2) for s in setbacks], 'below_min', [round(s[0], 2) for s in setbacks if s[0] < MIN_SB])
 
 # ---------- add setbacks + north to the plan DXF ----------
 if DXF:

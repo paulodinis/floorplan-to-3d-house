@@ -117,5 +117,8 @@ if DOORS:
         f = int(d['frame'])
         o.rotation_euler.z = 0.0; o.keyframe_insert('rotation_euler', index=2, frame=f)
         o.rotation_euler.z = sign * SWING; o.keyframe_insert('rotation_euler', index=2, frame=f + DUR)
+        wl = max(hi.x - lo.x, hi.y - lo.y); hl = hi.z - lo.z
+        if abs(wl - d['w']) > 0.2 or hl < 1.8: log.append(('suspicious', d['kind'], o.name, f, round(wl, 2), round(hl, 2)))   # leaf not one whole box
         log.append(('open', d['kind'], o.name, f))
-result = dict(doors=len(DOORS), opened=sum(1 for l in log if l[0] == 'open'), missing=[l for l in log if l[0] != 'open'])
+result = dict(doors=len(DOORS), opened=sum(1 for l in log if l[0] == 'open'), missing=[l for l in log if l[0] == 'no leaf'],
+              suspicious=[l for l in log if l[0] == 'suspicious'])   # leaf size != opening: the door may open only in part

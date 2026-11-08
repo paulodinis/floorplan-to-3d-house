@@ -29,10 +29,12 @@ It works as a conversation: Claude asks a few questions, shows the 2D plan, wait
 | Skill | Use it for |
 |---|---|
 | `/floorplan-to-3d-house` | The full workflow: intake → DXF → 2D plan for approval → 3D page → exports → model opened in Blender → optional video. It also triggers on its own when you share a plan. |
-| `/validate-plan` | Re-run the design QA (setbacks, stairs, doors, room sizes, area cap) and regenerate the 2D approval plan for an existing project. |
-| `/drone-video` | Make or redo the Blender drone / walkthrough video for an approved project (15 s, 30 s or 60 s, with doors opening). |
+| `/validate-plan` | Re-run the design QA (setbacks, stairs, doors, room sizes, area cap, furniture clear of doors and windows) and regenerate the 2D approval plan for an existing project. |
+| `/drone-video` | Make or redo the Blender drone / walkthrough video for an approved project: 15 / 30 / 60 s automatic tours, or your own shot list in words ("start at the door, rise, orbit, go into the suite, pivot 45° right…"). Doors open on the way. |
 
 Scripts, web engine, CC0 textures, Blender passes, references and an invented example project live in `skills/floorplan-to-3d-house/`.
+
+Each plan version's work files are packed into `work_v<n>.zip` next to the deliverables, so a later session (or a change request) continues from them instead of rebuilding the project.
 
 ## Install
 - **Claude desktop (Cowork):** open `floorplan-to-3d-house.plugin` in a chat and press the install button, or add it from the plugins menu.
@@ -49,7 +51,7 @@ Put the plugin in `plugins/floorplan-to-3d-house/` and add `.claude-plugin/marke
   "owner": { "name": "Paulo Silva" },
   "plugins": [
     { "name": "floorplan-to-3d-house", "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.5.3" }
+      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.6.0" }
   ]
 }
 ```
