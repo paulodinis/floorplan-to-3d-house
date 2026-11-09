@@ -45,6 +45,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--body); overf
 .spot.ffl { border-bottom-color: var(--accent); font-weight: 500; }
 .spot.room { transform: translate(-50%, -50%); text-align: center; line-height: 1.25; border-bottom-color: #2e7d32; font: 500 11px/1.25 var(--body); }
 .spot.room b { display: block; font: 600 12px/1.2 var(--body); }
+body.night #stage { background: linear-gradient(#070d1a, #18233a); }
 
 .panel {
   position: fixed; z-index: 2;
@@ -196,7 +197,7 @@ table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px
       <button id="d-dec" data-dec="-23.44" aria-pressed="false">{{d_dec}}</button>
     </div>
     <div class="sunrow">
-      <input type="range" id="hour" min="7" max="20.5" step="0.25" value="19" aria-label="{{aria_hour}}">
+      <input type="range" id="hour" min="6" max="24" step="0.25" value="19" aria-label="{{aria_hour}}">
       <output id="hour-out" for="hour">19:00</output>
     </div>
   </section>

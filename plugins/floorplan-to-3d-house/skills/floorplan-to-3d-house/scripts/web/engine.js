@@ -29,6 +29,7 @@ stage.appendChild(renderer.domElement);
 const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
+let envTex = null;   // sky environment map; switched off at night
 scene.fog = new THREE.Fog(0xd9dcd6, 160, 420);
 const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 900);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -96,8 +97,8 @@ new THREE.ImageLoader().load('tex/sky.jpg', img => {
   Object.assign(hdr, { colorSpace: THREE.LinearSRGBColorSpace, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, flipY: true, mapping: THREE.EquirectangularReflectionMapping });
   hdr.needsUpdate = true;
   const pm = new THREE.PMREMGenerator(renderer);
-  scene.environment = pm.fromEquirectangular(hdr).texture;
-  hdr.dispose(); pm.dispose();
+  envTex = pm.fromEquirectangular(hdr).texture; scene.environment = envTex;
+  hdr.dispose(); pm.dispose(); updateSun();
 }, undefined, () => {});
 
 // ---------- procedural textures (canvas) ----------
@@ -721,6 +722,19 @@ for (const [x, z] of lights) {
 // interior lights that switch on at dusk
 const roomLights = (LAY.room_lights || [])
   .map(([x, z, y]) => { const l = new THREE.PointLight(0xffc98a, 0, 9, 2); l.position.set(x, y, z); scene.add(l); return l; });
+// night: the garden bollards light the paths, and wall lights sit outside the front door, garage door and sliding doors
+const bollardLights = lights.map(([x, z]) => { const l = new THREE.PointLight(0xffc77a, 0, 5, 2); l.position.set(x, heightAt(x, z) + 0.65, z); scene.add(l); return l; });
+const inBlock = (x, z) => Object.values(LAY.blocks).some(b => x > b.rect[0] && x < b.rect[2] && z > b.rect[1] && z < b.rect[3]);
+const wallLights = [];
+for (const w of LAY.walls) for (const o of (w.ops || [])) {
+  if (!['front', 'garage', 'slide'].includes(o.kind)) continue;
+  const [ax, az] = w.a, [bx, bz] = w.b, L_ = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L_, uz = (bz - az) / L_;
+  const cx = ax + ux * (o.o + o.w / 2), cz = az + uz * (o.o + o.w / 2);
+  let nx = -uz, nz = ux; if (inBlock(cx + nx * 0.7, cz + nz * 0.7)) { nx = -nx; nz = -nz; }
+  if (inBlock(cx + nx * 0.7, cz + nz * 0.7)) continue;                       // interior opening
+  const l = new THREE.PointLight(0xffd29a, 0, 7, 2); l.position.set(cx + nx * 0.35, w.y0 + (o.head || 2.1) + 0.3, cz + nz * 0.35); scene.add(l); wallLights.push(l);
+  const fx = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), M.bollard); fx.position.copy(l.position).add(new THREE.Vector3(-nx * 0.2, 0, -nz * 0.2)); site.add(fx);
+}
 
 // ---------- labels: spot heights + floor levels ----------
 const spotEls = SITE.spots.map(s => {
@@ -793,11 +807,18 @@ function updateSun() {
   const dir = north.clone().multiplyScalar(Math.cos(az)).add(east.clone().multiplyScalar(Math.sin(az))).multiplyScalar(Math.cos(alt)).setY(Math.max(sinAlt, 0.02)).normalize();
   sun.position.copy(target).addScaledVector(dir, 120); sun.target.position.copy(target);
   const up = Math.max(0, Math.min(1, sinAlt * 2.2));
-  sun.intensity = 0.15 + 2.5 * up;
-  sun.color.setHSL(0.085, 0.75 - 0.45 * up, 0.58 + 0.3 * up);
-  hemi.intensity = 0.2 + 0.4 * up;
+  const night = Math.max(0, Math.min(1, (0.03 - sinAlt) / 0.15));      // 0 by day, 1 after dusk: moonlight, dark sky, lamps (slider goes to 24:00)
+  sun.intensity = (0.15 + 2.5 * up) * (1 - night) + 0.4 * night;
+  sun.color.setHSL(0.085, 0.75 - 0.45 * up, 0.58 + 0.3 * up).lerp(new THREE.Color(0x9fb3e6), night);
+  hemi.intensity = (0.2 + 0.4 * up) * (1 - night) + 0.18 * night;
+  hemi.color.set(0xdfe9f3).lerp(new THREE.Color(0x3a4a6e), night); hemi.groundColor.set(0x7d7058).lerp(new THREE.Color(0x1c1a17), night);
+  if (envTex) scene.environment = night > 0.5 ? null : envTex;
+  if (scene.fog) scene.fog.color.set(0xd9dcd6).lerp(new THREE.Color(0x0d1424), night);
+  document.body.classList.toggle('night', night > 0.5);
   const dusk = Math.max(0, Math.min(1, (0.32 - sinAlt) / 0.3));       // lights come on as the sun gets low
   roomLights.forEach(l => { l.intensity = 9 * dusk; });
+  bollardLights.forEach(l => { l.intensity = 2.2 * dusk; });
+  wallLights.forEach(l => { l.intensity = 4.5 * dusk; });
   M.bollard.emissiveIntensity = 2.5 * dusk;
 }
 updateSun();

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0 (2026-11-09)
+- **Clock up to midnight with a night look:** the sun slider runs from 06:00 to 24:00.
+  - After dusk: moonlight, dark sky and fog, no sky reflections.
+  - Room lights, garden bollards (now real lights) and new wall lights outside front doors, garage doors and sliding doors switch on.
+
 ## 1.6.1 (2026-11-09)
 - **Room names and areas on the 3D model:** new layer "Room names and areas" / "Nomes e áreas das divisões" (off by default; `window.__areas(true)`).
   - One label per room, near the wall tops, showing the top storey shown.
