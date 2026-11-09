@@ -43,6 +43,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--body); overf
   white-space: nowrap; font-variant-numeric: tabular-nums; border-bottom: 2px solid #dd6e00;
 }
 .spot.ffl { border-bottom-color: var(--accent); font-weight: 500; }
+.spot.room { transform: translate(-50%, -50%); text-align: center; line-height: 1.25; border-bottom-color: #2e7d32; font: 500 11px/1.25 var(--body); }
+.spot.room b { display: block; font: 600 12px/1.2 var(--body); }
 
 .panel {
   position: fixed; z-index: 2;
@@ -179,6 +181,7 @@ table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px
       <label class="toggle" for="t-roof">{{l_roof}} <input type="checkbox" id="t-roof" checked></label>
       <label class="toggle" for="t-furn">{{l_furn}} <input type="checkbox" id="t-furn" checked></label>
       <label class="toggle" for="t-terrain">{{l_terrain}} <input type="checkbox" id="t-terrain" checked></label>
+      <label class="toggle" for="t-areas">{{l_areas}} <input type="checkbox" id="t-areas"></label>
       <label class="toggle" for="t-spots">{{l_spots}} <input type="checkbox" id="t-spots"></label>
       <label class="toggle" for="t-trees">{{l_trees}} <input type="checkbox" id="t-trees" checked></label>
       <label class="toggle" for="t-plan">{{l_plan}} <input type="checkbox" id="t-plan"></label>

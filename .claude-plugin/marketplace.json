@@ -7,7 +7,7 @@
       "name": "floorplan-to-3d-house",
       "source": "./plugins/floorplan-to-3d-house",
       "description": "House plan (PDF/DXF) → 2D approval plan → interactive 3D model → GLB/DXF exports → optional Blender drone or walkthrough video.",
-      "version": "1.6.0",
+      "version": "1.6.1",
       "license": "MIT",
       "keywords": ["architecture", "floor plan", "dxf", "3d", "glb", "blender"]
     }

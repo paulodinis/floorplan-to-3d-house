@@ -19,7 +19,7 @@ const { chromium } = require('playwright');
   await page.goto('http://local/x.html', { waitUntil: 'domcontentloaded', timeout: 300000 });
   await page.waitForFunction(() => window.__ready && document.getElementById('loading').hidden, null, { timeout: 400000 });
   for (const sh of shots) {
-    for (const a of (sh.actions || [])) { if (a.startsWith('js:')) await page.evaluate(a.slice(3)); else await page.click(a); }   // 'js:window.__storey("0")'
+    for (const a of (sh.actions || [])) { if (a.startsWith('js:')) await page.evaluate(a.slice(3)); else await page.evaluate(sel => document.querySelector(sel).click(), a); }   // DOM click: page.click times out while the software renderer is busy   // 'js:window.__storey("0")'
     await page.waitForTimeout(sh.wait || 2500);
     await page.screenshot({ path: S + '/' + sh.out, timeout: 400000 });
     console.log('shot', sh.out);

@@ -732,12 +732,51 @@ for (const [txt, x, y, z] of (PROJ.level_labels ?? [])) {   // [['Bedrooms 32.00
   labelsEl.appendChild(el); spotEls.push({ el, v: () => new THREE.Vector3(x, y, z) });
 }
 let showSpots = false;
+// room names + areas: one label per room at its centroid, a little above its floor ("Areas" layer)
+const roomEls = [];
+{
+  const dec = (PROJ.ui && PROJ.ui.decimal) || '.', m2 = (PROJ.ui && PROJ.ui.m2) || 'm²';
+  for (const r of (LAY.rooms || [])) {
+    if (/^(escada|stair)/i.test(r.name)) continue;                     // the treads say it
+    const p = r.poly; let a = 0, cx = 0, cz = 0;
+    for (let i = 0; i < p.length; i++) { const [x0, z0] = p[(i + p.length - 1) % p.length], [x1, z1] = p[i], c = x0 * z1 - x1 * z0; a += c; cx += (x0 + x1) * c; cz += (z0 + z1) * c; }
+    if (Math.abs(a) < 1e-6) continue; cx /= 3 * a; cz /= 3 * a;
+    const y = (r.level != null ? r.level - FFL : 0) + 2.5,   // near the wall tops: readable from above, rarely hidden by its own walls
+          area = (r.area ?? Math.abs(a / 2)).toFixed(2).replace('.', dec);
+    const el = document.createElement('div'); el.className = 'spot room'; el.hidden = true; el.style.left = el.style.top = '0';
+    el.innerHTML = `<b></b>${area} ${m2}`; el.firstChild.textContent = r.name;
+    labelsEl.appendChild(el); el.hidden = false; const bw = el.offsetWidth || 80, bh = el.offsetHeight || 28; el.hidden = true;   // measure once
+    roomEls.push({ el, st: r.storey || 0, a: Math.abs(a / 2), bw, bh, v: () => new THREE.Vector3(cx, y, cz) });
+  }
+  roomEls.sort((p, q) => q.a - p.a);                                   // big rooms keep their label when labels collide
+}
+let showAreas = false;
+const occRay = new THREE.Raycaster(); let occTick = 0;
+function occluded(pt) {                                               // an opaque wall between the camera and the label (glass doesn't count)
+  const d = pt.clone().sub(camera.position), dist = d.length(); occRay.set(camera.position, d.normalize()); occRay.far = Math.max(0, dist - 0.3);
+  const occ = [house]; if (roofs.visible) occ.push(roofs);
+  return occRay.intersectObjects(occ, true).some(hh => hh.object.visible && !/glass/i.test(hh.object.material?.name || ''));
+}
 function updateLabels() {
   const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
   for (const o of spotEls) {
     const p = o.v().project(camera), vis = showSpots && p.z < 1 && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05;
     o.el.hidden = !vis;
     if (vis) o.el.style.transform = `translate(${(p.x * 0.5 + 0.5) * w}px, ${(-p.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+  }
+  const stShown = typeof storeyShown === 'undefined' ? Infinity : storeyShown;
+  const placed = [], recheck = (occTick++ % 3) === 0;                 // ray tests every 3rd frame
+  for (const o of roomEls) {
+    const p = o.v().project(camera);
+    let vis = showAreas && o.st === Math.min(stShown, MAX_STOREY) && p.z < 1 && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05;   // top storey shown only
+    if (vis && (recheck || o.occ === undefined)) o.occ = occluded(o.v());
+    if (o.occ) vis = false;
+    if (vis) {                                                         // skip a label that would cover a bigger room's label
+      const x = (p.x * 0.5 + 0.5) * w, y = (-p.y * 0.5 + 0.5) * h, bw = o.bw / 2 + 2, bh = o.bh / 2 + 1;
+      if (placed.some(q => Math.abs(q[0] - x) < q[2] + bw && Math.abs(q[1] - y) < q[3] + bh)) vis = false;
+      else { placed.push([x, y, bw, bh]); o.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`; }
+    }
+    o.el.hidden = !vis;
   }
 }
 
@@ -814,6 +853,14 @@ window.__storey = setStorey;
 document.getElementById('t-furn').addEventListener('change', e => { furniture.visible = e.target.checked; });
 document.getElementById('t-trees').addEventListener('change', e => { trees.visible = e.target.checked; });
 document.getElementById('t-spots').addEventListener('change', e => { showSpots = e.target.checked; });
+// room labels sit on the floors: switching them on takes the roof off so they read from above
+let roofBeforeAreas = null;
+document.getElementById('t-areas').addEventListener('change', e => {
+  showAreas = e.target.checked;
+  if (showAreas) { roofBeforeAreas = document.getElementById('t-roof').checked; setRoof(false); }
+  else if (roofBeforeAreas) { setRoof(true); roofBeforeAreas = null; }                  // put the roof back if the labels took it off
+});
+window.__areas = on => { const cb = document.getElementById('t-areas'); cb.checked = on; cb.dispatchEvent(new Event('change')); };
 document.getElementById('t-plan').addEventListener('change', e => { groundU.planMix.value = e.target.checked ? 0.9 : 0; });
 document.getElementById('t-terrain').addEventListener('change', e => { relief = e.target.checked; applyHeights(); placeTrees(); });
 document.querySelectorAll('.dseg button').forEach(b => b.addEventListener('click', () => {

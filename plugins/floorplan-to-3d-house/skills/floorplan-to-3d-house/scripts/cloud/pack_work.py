@@ -7,7 +7,7 @@ Keep one zip per version next to the deliverables on the user's PC: <Project>/v<
 """
 import sys, os, zipfile, glob
 mode, a, b = sys.argv[1:4]
-KEEP = ['project.json', 'site3d/*.json', 'site3d/tex/mask*.png', 'site3d/tex/v2_mask*.png', 'export/plan*.png', 'export/plan*.dxf',
+KEEP = ['project.json', 'site3d/*.json', 'site3d/tex/mask*.png', 'site3d/tex/v2_mask*.png', 'site3d/tex/plan_v2.jpg', 'export/plan*.png', 'export/plan*.dxf',
         'export/plan*.grid.json', 'export/camera*.json', 'export/qa.md', '*.json']
 if mode == 'pack':
     n = 0

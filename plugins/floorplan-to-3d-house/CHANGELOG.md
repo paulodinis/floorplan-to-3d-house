@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.1 (2026-11-09)
+- **Room names and areas on the 3D model:** new layer "Room names and areas" / "Nomes e áreas das divisões" (off by default; `window.__areas(true)`).
+  - One label per room, near the wall tops, showing the top storey shown.
+  - Labels behind an opaque wall are hidden; glass doesn't hide them.
+  - When labels collide, the bigger room keeps its label.
+  - Switching the layer on takes the roof off; switching it off puts the roof back.
+- `shot2.js`: clicks through the DOM. `page.click` timed out while the software renderer was busy.
+- `pack_work.py` also keeps `site3d/tex/plan_v2.jpg`.
+
 ## 1.6.0 (2026-11-08)
 Fewer tokens per project, same flow and the same approval stops.
 - **Leaner skills.** `floorplan-to-3d-house/SKILL.md` goes from ~3 400 to ~1 100 words: the flow and its stops stay; the commands move to new references (`inputs.md`, `plan-and-grid.md`, `exports.md`). The video (old Step 8, duplicated) lives only in `drone-video`. All three skills total ~2 200 words, down from ~4 800.

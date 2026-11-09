@@ -59,7 +59,8 @@
    "Ground floor",
    "First floor",
    "Second floor"
-  ]
+  ],
+  "l_areas": "Room names and areas"
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -121,6 +122,7 @@
    "Rés-do-chão",
    "1.º andar",
    "2.º andar"
-  ]
+  ],
+  "l_areas": "Nomes e áreas das divisões"
  }
 }
