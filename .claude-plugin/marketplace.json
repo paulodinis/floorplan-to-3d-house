@@ -10,7 +10,7 @@
       "name": "floorplan-to-3d-house",
       "source": "./plugins/floorplan-to-3d-house",
       "description": "Drop in a site plan or floor plan (vector PDF or DXF) and walk through your future house. Claude extracts a clean DXF, drafts a dimensioned 2D plan for your approval, then builds an interactive 3D model with orbit, walk and drone modes, a sun study, elevations and a daylight report. Exports GLB and 3D DXF, and can render a photoreal drone or walkthrough video in Blender on your machine. One or two storeys, style presets from your reference photos. Indicative design only — not for permits.",
-      "version": "1.8.2",
+      "version": "1.8.3",
       "author": { "name": "Paulo Silva", "url": "https://github.com/paulodinis" },
       "homepage": "https://github.com/paulodinis/floorplan-to-3d-house",
       "repository": "https://github.com/paulodinis/floorplan-to-3d-house",

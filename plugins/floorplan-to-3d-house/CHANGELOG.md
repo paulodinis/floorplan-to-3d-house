@@ -1,10 +1,16 @@
 # Changelog
 
+## 1.8.3 (2026-11-11)
+Plugin directory checks, second round.
+- **`three.module.js` under 1 MiB:** the directory can't read files over 1 MiB. The bundled copy is reprinted without comments (esbuild, tab indentation), and its 161 GLSL string constants move verbatim to `scripts/web/three/three.shaderchunks.js` (985 KB + 143 KB). Same 416 exports and values as the npm build; `export.js`, `navtest.js` and `shot2.js` serve both files. Checked with the GLB export and the 5 renders of the bundled example.
+- Plugin icon re-encoded again (480×480, 256 colours, 40 KB): the previous file's compressed bytes still matched a shell pattern.
+- CHANGELOG wording that the checker read as a credential.
+
 ## 1.8.2 (2026-11-11)
 Packaging for the plugin directory: nothing is downloaded and run at setup.
 - **three.js r160 bundled:** `three.module.js`, `OrbitControls.js`, `GLTFExporter.js` and `TextureUtils.js` ship unmodified in `scripts/web/three/` (MIT, licence alongside). `export.js`, `navtest.js` and `shot2.js` serve them from there; the work dir no longer needs `three/`. `RGBELoader` is no longer used.
 - **`setup_workspace.sh` downloads nothing:** it copies the textures and reports missing dependencies. ezdxf: `python3 -m pip install ezdxf==1.4.5`, or `EZDXF_SRC` pointing at a source tree where PyPI is blocked (`references/inputs.md`).
-- Plugin icon re-encoded at 480×480 (40 KB instead of 1.36 MB).
+- Plugin icon re-encoded at 512×512 (379 KB instead of 1.36 MB).
 
 ## 1.8.1 (2026-11-11)
 - **Fix (#2): fonts on macOS and Windows.** `plan2d_simple.py`, `elevations.py` and `camera_script.py --preview` aborted with `OSError: cannot open resource` where `/usr/share/fonts/truetype/dejavu/` doesn't exist; `plan2d.py`, `sun_report.py` and `camera_path.py` ran but lost their labels or fell back to a bitmap font. All six now take their fonts from the new `scripts/cloud/fonts.py`: DejaVu (Linux), Arial Unicode / Arial (macOS) or Segoe UI (Windows), preferring a font that has every glyph the sheets draw (the `▽` level mark is missing from Arial and Segoe UI), then Pillow's bundled font. `FLOORPLAN_FONT` / `FLOORPLAN_FONT_BOLD` pick a font explicitly.

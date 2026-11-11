@@ -2,7 +2,7 @@
 
 | Component | Use | License |
 |---|---|---|
-| three.js r160 (mrdoob/three.js) | 3D engine, loaded from jsDelivr by the 3D page; `three.module.js`, `OrbitControls.js`, `GLTFExporter.js` and `TextureUtils.js` bundled unmodified in `scripts/web/three/` for the local Playwright tests and GLB export (licence: `scripts/web/three/LICENSE`) | MIT |
+| three.js r160 (mrdoob/three.js) | 3D engine, loaded from jsDelivr by the 3D page; `OrbitControls.js`, `GLTFExporter.js` and `TextureUtils.js` bundled unmodified in `scripts/web/three/` for the local Playwright tests and GLB export; `three.module.js` bundled reprinted without comments, with its GLSL string constants moved verbatim to `three.shaderchunks.js` (each file under 1 MiB; same exports and values). Licence: `scripts/web/three/LICENSE` | MIT |
 | ezdxf (mozman/ezdxf) | DXF read/write, installed by the user (`pip install ezdxf==1.4.5`), not bundled | MIT |
 | pdfplumber / pdfminer.six | PDF vector extraction (pip) | MIT |
 | Playwright + Chromium | headless tests, GLB export, renders | Apache-2.0 / BSD-style |

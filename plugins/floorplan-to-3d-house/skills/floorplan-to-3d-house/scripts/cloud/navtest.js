@@ -8,7 +8,7 @@ const ROUTE = process.env.NAV_ROUTE ? JSON.parse(fs.readFileSync(process.env.NAV
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
   page.on('pageerror', e => console.log('pageerror', e.message));
   const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
-  const map = { 'build/three.module.js': T + '/three.module.js', 'controls/OrbitControls.js': T + '/OrbitControls.js' };
+  const map = { 'build/three.module.js': T + '/three.module.js', 'build/three.shaderchunks.js': T + '/three.shaderchunks.js', 'controls/OrbitControls.js': T + '/OrbitControls.js' };
   await page.route('**/*', route => {
     const u = route.request().url();
     for (const k in map) if (u.includes(k)) return route.fulfill({ path: map[k], contentType: 'text/javascript' });

@@ -10,6 +10,7 @@ const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled th
   page.on('console', m => { if (m.type() === 'error') console.log('console', m.text()); });
   const map = {
     'three@0.160.0/build/three.module.js': T + '/three.module.js',
+    'build/three.shaderchunks.js': T + '/three.shaderchunks.js',
     'examples/jsm/controls/OrbitControls.js': T + '/OrbitControls.js',
     'examples/jsm/exporters/GLTFExporter.js': T + '/GLTFExporter.js',
     'examples/jsm/utils/TextureUtils.js': T + '/TextureUtils.js',

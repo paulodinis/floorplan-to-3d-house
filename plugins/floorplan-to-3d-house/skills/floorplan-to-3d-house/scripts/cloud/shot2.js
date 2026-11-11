@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('console', m.type(), m.text().slice(0, 200)); });
   page.on('pageerror', e => console.log('pageerror', e.message));
   const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
-  const map = { 'build/three.module.js': T + '/three.module.js', 'controls/OrbitControls.js': T + '/OrbitControls.js',
+  const map = { 'build/three.module.js': T + '/three.module.js', 'build/three.shaderchunks.js': T + '/three.shaderchunks.js', 'controls/OrbitControls.js': T + '/OrbitControls.js',
     'exporters/GLTFExporter.js': T + '/GLTFExporter.js', 'utils/TextureUtils.js': T + '/TextureUtils.js' };
   await page.route('**/*', route => {
     const u = route.request().url();

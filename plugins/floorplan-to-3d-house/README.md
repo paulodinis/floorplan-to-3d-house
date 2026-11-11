@@ -51,7 +51,7 @@ Put the plugin in `plugins/floorplan-to-3d-house/` and add `.claude-plugin/marke
   "owner": { "name": "Paulo Silva" },
   "plugins": [
     { "name": "floorplan-to-3d-house", "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.8.2" }
+      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.8.3" }
   ]
 }
 ```
