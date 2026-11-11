@@ -3,11 +3,12 @@ const fs = require('fs');
 // NAV_ROUTE=route.json: [[x, z, "label"], ...] or ["spawn", x, z] entries; without it the example's route runs
 const ROUTE = process.env.NAV_ROUTE ? JSON.parse(fs.readFileSync(process.env.NAV_ROUTE, 'utf8')) : null;
 (async () => {
-  const S = process.env.WORK || process.cwd();   // project work dir (contains site3d/, three/)
+  const S = process.env.WORK || process.cwd();   // project work dir (contains site3d/)
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
   page.on('pageerror', e => console.log('pageerror', e.message));
-  const map = { 'build/three.module.js': S + '/three/t/build/three.module.js', 'controls/OrbitControls.js': S + '/three/t/examples/jsm/controls/OrbitControls.js', 'loaders/RGBELoader.js': S + '/three/RGBELoader.js' };
+  const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
+  const map = { 'build/three.module.js': T + '/three.module.js', 'controls/OrbitControls.js': T + '/OrbitControls.js' };
   await page.route('**/*', route => {
     const u = route.request().url();
     for (const k in map) if (u.includes(k)) return route.fulfill({ path: map[k], contentType: 'text/javascript' });

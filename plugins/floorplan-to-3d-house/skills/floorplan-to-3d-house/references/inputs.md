@@ -1,7 +1,7 @@
 # Inputs: PDF / DXF → site.json (Steps 1–3 in detail)
 
 ##  1. Workspace and inputs
-Run `bash <skill>/scripts/setup_workspace.sh` in a new project work dir. Write `project.json` from `examples/project.json`: name, `lang`, location, `north_deg`, `plan_scale`, `area_limit`, `setback_min`, notes and views.
+Run `bash <skill>/scripts/setup_workspace.sh` in a new project work dir; it copies the textures and reports missing dependencies. ezdxf (DXF read/write): `python3 -m pip install ezdxf==1.4.5`; where PyPI is blocked, point `EZDXF_SRC` at the `src` folder of an ezdxf 1.4.5 source tree (default `./ezdxf-src/src`). Write `project.json` from `examples/project.json`: name, `lang`, location, `north_deg`, `plan_scale`, `area_limit`, `setback_min`, notes and views.
 - **PDF:** `pdfinfo`, `pdfimages -list` (vector? raster scans need tracing; say so), `pdffonts`. Render at 110 dpi to look at it. Read the scale from the title block. `K = 25.4/72 × scale / 1000` converts PDF points to metres.
 - **DXF:** skip the conversion. Check `$INSUNITS` and the coordinate magnitude (mm? national grid? subtract an origin near the house). List layers, explode blocks, render a preview, map the layers to plot/walls/roof/spot heights/trees/road. If the mapping isn't obvious, ask with a layer list and a thumbnail.
 - **DWG:** can't be read here. Ask for a DXF export.

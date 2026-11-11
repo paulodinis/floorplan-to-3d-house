@@ -1,13 +1,14 @@
 const { chromium } = require('playwright');
 (async () => {
-  const S = process.env.WORK || process.cwd();   // project work dir (contains site3d/, three/)
+  const S = process.env.WORK || process.cwd();   // project work dir (contains site3d/)
   const shots = JSON.parse(process.argv[2]), page_ = process.argv[3] || 'page.html';
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: shots[0].w || 1400, height: shots[0].h || 860 } });
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('console', m.type(), m.text().slice(0, 200)); });
   page.on('pageerror', e => console.log('pageerror', e.message));
-  const map = { 'build/three.module.js': S + '/three/t/build/three.module.js', 'controls/OrbitControls.js': S + '/three/t/examples/jsm/controls/OrbitControls.js',
-    'loaders/RGBELoader.js': S + '/three/RGBELoader.js', 'exporters/GLTFExporter.js': S + '/three/GLTFExporter.js', 'utils/TextureUtils.js': S + '/three/TextureUtils.js' };
+  const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
+  const map = { 'build/three.module.js': T + '/three.module.js', 'controls/OrbitControls.js': T + '/OrbitControls.js',
+    'exporters/GLTFExporter.js': T + '/GLTFExporter.js', 'utils/TextureUtils.js': T + '/TextureUtils.js' };
   await page.route('**/*', route => {
     const u = route.request().url();
     for (const k in map) if (u.includes(k)) return route.fulfill({ path: map[k], contentType: 'text/javascript' });

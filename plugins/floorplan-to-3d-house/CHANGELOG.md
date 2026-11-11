@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.2 (2026-11-11)
+Packaging for the plugin directory: nothing is downloaded and run at setup.
+- **three.js r160 bundled:** `three.module.js`, `OrbitControls.js`, `GLTFExporter.js` and `TextureUtils.js` ship unmodified in `scripts/web/three/` (MIT, licence alongside). `export.js`, `navtest.js` and `shot2.js` serve them from there; the work dir no longer needs `three/`. `RGBELoader` is no longer used.
+- **`setup_workspace.sh` downloads nothing:** it copies the textures and reports missing dependencies. ezdxf: `python3 -m pip install ezdxf==1.4.5`, or `EZDXF_SRC` pointing at a source tree where PyPI is blocked (`references/inputs.md`).
+- Plugin icon re-encoded at 512×512 (379 KB instead of 1.36 MB).
+
 ## 1.8.1 (2026-11-11)
 - **Fix (#2): fonts on macOS and Windows.** `plan2d_simple.py`, `elevations.py` and `camera_script.py --preview` aborted with `OSError: cannot open resource` where `/usr/share/fonts/truetype/dejavu/` doesn't exist; `plan2d.py`, `sun_report.py` and `camera_path.py` ran but lost their labels or fell back to a bitmap font. All six now take their fonts from the new `scripts/cloud/fonts.py`: DejaVu (Linux), Arial Unicode / Arial (macOS) or Segoe UI (Windows), preferring a font that has every glyph the sheets draw (the `▽` level mark is missing from Arial and Segoe UI), then Pillow's bundled font. `FLOORPLAN_FONT` / `FLOORPLAN_FONT_BOLD` pick a font explicitly.
 
@@ -29,7 +35,7 @@
 - `pack_work.py` also keeps `site3d/tex/plan_v2.jpg`.
 
 ## 1.6.0 (2026-11-08)
-Fewer tokens per project, same flow and the same approval stops.
+Less context per project, same flow and the same approval stops.
 - **Leaner skills.** `floorplan-to-3d-house/SKILL.md` goes from ~3 400 to ~1 100 words: the flow and its stops stay; the commands move to new references (`inputs.md`, `plan-and-grid.md`, `exports.md`). The video (old Step 8, duplicated) lives only in `drone-video`. All three skills total ~2 200 words, down from ~4 800.
 - **Work files per version:** new `scripts/cloud/pack_work.py` packs layout, site, project, masks, plans and camera paths into `work_v<n>.zip` next to the deliverables. A new session unpacks it instead of rebuilding the project from a published page or the PDF.
 - **Cheap self-checks:**

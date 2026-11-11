@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
+const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160 (served instead of the CDN)
 (async () => {
   const S = process.env.WORK || process.cwd(), NAME = process.env.MODEL_NAME || 'model', OUT = process.argv[3], mode = process.argv[4] || 'all';
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
@@ -8,11 +9,10 @@ const fs = require('fs');
   page.on('pageerror', e => console.log('pageerror', e.message));
   page.on('console', m => { if (m.type() === 'error') console.log('console', m.text()); });
   const map = {
-    'three@0.160.0/build/three.module.js': S + '/three/t/build/three.module.js',
-    'examples/jsm/controls/OrbitControls.js': S + '/three/t/examples/jsm/controls/OrbitControls.js',
-    'examples/jsm/loaders/RGBELoader.js': S + '/three/RGBELoader.js',
-    'examples/jsm/exporters/GLTFExporter.js': S + '/three/GLTFExporter.js',
-    'examples/jsm/utils/TextureUtils.js': S + '/three/TextureUtils.js',
+    'three@0.160.0/build/three.module.js': T + '/three.module.js',
+    'examples/jsm/controls/OrbitControls.js': T + '/OrbitControls.js',
+    'examples/jsm/exporters/GLTFExporter.js': T + '/GLTFExporter.js',
+    'examples/jsm/utils/TextureUtils.js': T + '/TextureUtils.js',
   };
   await page.route('**/*', route => {
     const u = route.request().url();

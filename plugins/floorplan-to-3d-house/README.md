@@ -19,7 +19,7 @@ It works as a conversation: Claude asks a few questions, shows the 2D plan, wait
 
 ## What you need
 - Claude with code execution (Claude.ai / Claude desktop with Cowork, or Claude Code).
-- Network access to GitHub (the setup script fetches ezdxf and three.js r160). Python 3 with pdfplumber, numpy, opencv-python and pillow; Node with Playwright and Chromium for tests and exports.
+- Python 3 with ezdxf, pdfplumber, numpy, opencv-python and pillow; Node with Playwright and Chromium for tests and exports.
 - Optional, for the video:
   - Blender 4.2+ (tested on 5.2) with the Blender MCP add-on;
   - a GPU;
@@ -51,7 +51,7 @@ Put the plugin in `plugins/floorplan-to-3d-house/` and add `.claude-plugin/marke
   "owner": { "name": "Paulo Silva" },
   "plugins": [
     { "name": "floorplan-to-3d-house", "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.8.1" }
+      "description": "House plan (PDF/DXF) → 2D approval plan → 3D model → GLB/DXF → Blender video", "version": "1.8.2" }
   ]
 }
 ```
