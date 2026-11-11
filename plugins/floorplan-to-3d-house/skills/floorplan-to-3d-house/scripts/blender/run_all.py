@@ -53,6 +53,8 @@ def run(name):
 for name in ("materials.py", "setup.py", "tweaks.py", "tweaks2.py", "doors.py"):
     run(name)
 if "Far_Ground" in bpy.data.objects: bpy.data.objects.remove(bpy.data.objects["Far_Ground"])
+for name in P.get("extra_passes", []):                      # optional passes, e.g. "soften.py" (rounded furniture)
+    run(name)
 for name in ("tweaks4.py", "terrain.py", "style.py", "haze.py", "final.py"):
     if name == "final.py" and not P.get("render", False):
         pr = dict(P); pr["render"] = False

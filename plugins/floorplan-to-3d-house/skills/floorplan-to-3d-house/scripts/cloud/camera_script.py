@@ -1,6 +1,6 @@
 """Scripted camera path: the user's own shot list, in plain steps, turned into Blender camera keys.
 
-usage: python3 camera_script.py layout.json script.json out.json [--site site.json] [--preview path.png] [--lang pt-PT]
+usage: python3 camera_script.py layout.json script.json out.json [--site site.json] [--preview path.png] [--lang pt-PT] [--eye 1.6]
 out.json has the same keys as camera_path.py (camera_keys, frames_src, frames_out, doors, stops) plus `checks`
 (eye closer than 0.2 m to a wall, walls crossed without an opening, glass crossed). Merge it into params.json the same way.
 
@@ -33,10 +33,11 @@ import json, math, sys, argparse
 ap = argparse.ArgumentParser()
 ap.add_argument('layout'); ap.add_argument('script'); ap.add_argument('out')
 ap.add_argument('--site'); ap.add_argument('--preview'); ap.add_argument('--lang', default='en')
+ap.add_argument('--eye', type=float, default=1.6, help='eye height above the floor (m); 1.5 = a 1.60 m person')
 A = ap.parse_args()
 L = json.load(open(A.layout, encoding='utf-8')); SC = json.load(open(A.script, encoding='utf-8'))
 FPS = int(SC.get('fps', 25)); SEC = float(SC.get('seconds', 60)); F = int(round(SEC * FPS))
-EYE, LOOKD = 1.6, 0.25                    # eye above the floor; look slightly down (m per m)
+EYE, LOOKD = A.eye, 0.25                    # eye above the floor; look slightly down (m per m)
 
 # ---------- geometry ----------
 def inside(p, poly):

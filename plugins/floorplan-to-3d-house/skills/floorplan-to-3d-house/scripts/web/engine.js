@@ -483,6 +483,7 @@ const M = {
   chair: mat('Furn_Chair', { color: 0xb59a78, roughness: 0.7 }),
   bark: mat('Olive_Bark', { color: 0x6b6050, roughness: 1 }),
   olive: [0x66744d, 0x727f55, 0x5d6a46].map((c, i) => { const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.92, flatShading: true }); m.name = 'Olive_Foliage'; return m; }),
+  led: (() => { const m = new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffd9a0, emissiveIntensity: 2.2, roughness: 0.4 }); m.name = 'LED_Strip'; return m; })(),
   bollard: (() => { const m = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, emissive: 0xffc77a, emissiveIntensity: 0, roughness: 0.5 }); m.name = 'Garden_Light'; return m; })(),
 };
 // ---------- style preset (project.json "style" → PROJ.style_data, see references/style-guide.md) ----------
@@ -552,7 +553,8 @@ function buildWall(w) {
     } else if (k === 'door') {
       addMesh(g, mbox(s + 0.02, e - 0.02, y0, head, -0.02, 0.02), M.door);
     } else if (k === 'garage') {
-      addMesh(g, mbox(s, e, y0, head, -0.04, 0.04), M.garage);
+      if (o.open) addMesh(g, mbox(s, e, head, head + 0.28, -0.16, 0.16), M.garage);   // open: roller drum above the opening
+      else addMesh(g, mbox(s, e, y0, head, -0.04, 0.04), M.garage);
     }
     cur = e;
   }
@@ -626,14 +628,218 @@ function hipRoof(x0, z0, x1, z1, RY) {
 }
 for (const r of LAY.roofs) hipRoof(r.rect[0], r.rect[1], r.rect[2], r.rect[3], r.eave);
 
-// ---------- furniture ----------
-for (const f of LAY.furniture) {
-  const [x0, z0, x1, z1] = f.b;
-  const fg = sg(f, furniture);
-  addMesh(fg, mbox(x0, x1, f.y0, f.y0 + Math.max(0.01, f.h), z0, z1), M[f.mat] || M.white, f.h > 0.05, true);
-  if (/cama|bed/i.test(f.name)) addMesh(fg, mbox(x0 + 0.1, x1 - 0.1, f.y0 + f.h, f.y0 + f.h + 0.14, z0 + 0.12, z0 + 0.55), M.white);     // pillows
-  if (/sofá|sofa/i.test(f.name)) addMesh(fg, mbox(x0, x1, f.y0, f.y0 + 0.42, z0, z1), M.fabric, true);
+// ---------- furniture: simple procedural models built from the layout boxes (v1.8) ----------
+// Each layout item keeps its footprint b=[x0,z0,x1,z1], y0 and h; the name (pt/en) picks the model.
+// The back of a piece is the side nearest a wall (or f.back: 'n'|'s'|'e'|'w'); f.head does the same for beds.
+function wallDist(x, z) {
+  let d = 1e9;
+  for (const w of LAY.walls) {
+    if (w.y0 > 1) continue;
+    const [ax, az] = w.a, [bx, bz] = w.b, dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-9;
+    const u = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+    d = Math.min(d, Math.hypot(x - ax - u * dx, z - az - u * dz) - (w.t || 0.2) / 2);
+  }
+  return d;
 }
+function backSide(f, longOnly = true) {
+  if (f.back) return f.back;
+  const [x0, z0, x1, z1] = f.b, wx = x1 - x0, wz = z1 - z0;
+  const c = { n: [(x0 + x1) / 2, z0], s: [(x0 + x1) / 2, z1], w: [x0, (z0 + z1) / 2], e: [x1, (z0 + z1) / 2] };
+  const keys = !longOnly || Math.abs(wx - wz) < 0.15 ? ['n', 's', 'w', 'e'] : wx > wz ? ['n', 's'] : ['w', 'e'];
+  let best = keys[0], bd = 1e9;
+  for (const k of keys) { const d = wallDist(...c[k]); if (d < bd) { bd = d; best = k; } }
+  return best;
+}
+// local frame: u across the front (0..W), v from the back (0) to the front (D)
+function fframe(f, side, parent) {
+  const [x0, z0, x1, z1] = f.b, ax = side === 'n' || side === 's';
+  const W = ax ? x1 - x0 : z1 - z0, D = ax ? z1 - z0 : x1 - x0;
+  const world = (u, v) => ax ? [x0 + u, side === 'n' ? z0 + v : z1 - v] : [side === 'w' ? x0 + v : x1 - v, z0 + u];
+  const box = (u0, u1, v0, v1, ya, yb, m, cast = true) => {
+    const [pa, qa] = world(u0, v0), [pb, qb] = world(u1, v1);
+    if (yb - ya < 0.002) yb = ya + 0.002;
+    return addMesh(parent, mbox(Math.min(pa, pb), Math.max(pa, pb), ya, yb, Math.min(qa, qb), Math.max(qa, qb)), m, cast, true);
+  };
+  const cyl = (u, v, r, ya, yb, m, seg = 18, rTop = r) => {
+    const [x, z] = world(u, v), g = new THREE.CylinderGeometry(rTop, r, yb - ya, seg); g.translate(x, (ya + yb) / 2, z);
+    return addMesh(parent, g, m, true, true);
+  };
+  return { W, D, box, cyl, world };
+}
+const fLeg = (F, u, v, y0, y1, m, s = 0.04) => F.box(u - s / 2, u + s / 2, v - s / 2, v + s / 2, y0, y1, m);
+function fCabinet(F, y, H, body, { top = null, topT = 0.03, plinth = 0.1, doorW = 0.6, over = 0.02, handles = true } = {}) {
+  const { W, D, box } = F, yb = y + plinth, yt = y + H - (top ? topT : 0);
+  if (plinth > 0) box(0.03, W - 0.03, 0, D - 0.07, y, yb, M.dark, false);
+  box(0, W, 0, D - 0.02, yb, yt, body);
+  const n = Math.max(1, Math.round(W / doorW));
+  for (let i = 1; i < n; i++) { const u = W * i / n; box(u - 0.004, u + 0.004, D - 0.025, D - 0.017, yb + 0.02, yt - 0.02, M.dark, false); }
+  if (handles) for (let i = 0; i < n; i++) {
+    const u = W * (i + 0.5) / n + (i % 2 ? -1 : 1) * (W / n / 2 - 0.07);
+    box(u - 0.008, u + 0.008, D - 0.035, D - 0.005, Math.max(yb + 0.05, yt - 0.25), yt - 0.06, M.frame, false);
+  }
+  if (top) box(0, W, 0, D + over, yt, y + H, top);
+}
+function fTable(F, y, H, top, leg, { t = 0.04, inset = 0.08 } = {}) {
+  const { W, D, box } = F; box(0, W, 0, D, y + H - t, y + H, top);
+  for (const [u, v] of [[inset, inset], [W - inset, inset], [inset, D - inset], [W - inset, D - inset]]) fLeg(F, u, v, y, y + H - t, leg, 0.05);
+}
+function fChair(F, y, H, seatH, m, back = true) {
+  const { W, D, box } = F, s = 0.03;
+  for (const [u, v] of [[0.04, 0.04], [W - 0.04, 0.04], [0.04, D - 0.04], [W - 0.04, D - 0.04]]) fLeg(F, u, v, y, y + seatH, M.dark, s);
+  box(0, W, 0, D, y + seatH, y + seatH + 0.04, m);
+  if (back) box(0.02, W - 0.02, 0, 0.04, y + seatH + 0.04, y + Math.max(H, seatH + 0.4), m);
+}
+function fSofa(f, F, y, H, arms) {
+  const { W, D, box } = F, seat = y + 0.42, armW = 0.18, bd = 0.22;
+  box(0.05, W - 0.05, 0.05, D - 0.05, y, y + 0.08, M.dark, false);                        // base / feet line
+  box(0, W, 0, D, y + 0.08, y + 0.3, M.fabric);                                           // frame
+  const u0 = arms.l ? armW : 0, u1 = W - (arms.r ? armW : 0), n = Math.max(1, Math.round((u1 - u0) / 0.9));
+  for (let i = 0; i < n; i++) { const a = u0 + (u1 - u0) * i / n, b = u0 + (u1 - u0) * (i + 1) / n;
+    box(a + 0.01, b - 0.01, bd, D - 0.02, y + 0.3, seat, M.fabric);                       // seat cushions
+    box(a + 0.02, b - 0.02, 0.02, bd + 0.02, seat, y + H, M.fabric); }                     // back cushions
+  box(0, W, 0, bd - 0.04, y + 0.3, y + H - 0.05, M.fabric);                               // back frame
+  if (arms.l) box(0, armW, 0, D, y + 0.3, seat + 0.2, M.fabric);
+  if (arms.r) box(W - armW, W, 0, D, y + 0.3, seat + 0.2, M.fabric);
+}
+function fBed(f, parent) {
+  const head = f.head || backSide(f, false), F = fframe(f, head, parent), { W, D, box } = F, y = f.y0;
+  box(0, W, 0, D, y + 0.06, y + 0.3, M.wood);                                              // frame
+  for (const [u, v] of [[0.06, 0.06], [W - 0.06, 0.06], [0.06, D - 0.06], [W - 0.06, D - 0.06]]) fLeg(F, u, v, y, y + 0.06, M.dark, 0.06);
+  box(0.03, W - 0.03, 0.03, D - 0.03, y + 0.3, y + 0.5, M.white);                          // mattress
+  box(0.01, W - 0.01, D * 0.3, D + 0.02, y + 0.5, y + 0.55, M.fabric);                    // duvet
+  box(0.01, W - 0.01, D - 0.02, D + 0.02, y + 0.25, y + 0.55, M.fabric);                  // duvet fall at the foot
+  const pw = W > 1.3 ? (W - 0.3) / 2 : W - 0.2;
+  for (let i = 0; i < (W > 1.3 ? 2 : 1); i++) { const a = 0.1 + i * (pw + 0.1); box(a, a + pw, 0.06, 0.48, y + 0.5, y + 0.64, M.white); }
+}
+function fToilet(F, y) {
+  const { W, D, box, cyl } = F;
+  box(W * 0.1, W * 0.9, 0, 0.18, y + 0.4, y + 0.8, M.white);                              // cistern
+  cyl(W / 2, D * 0.55, 0.16, y, y + 0.36, M.white, 20, 0.19);                             // bowl
+  cyl(W / 2, D * 0.55, 0.19, y + 0.36, y + 0.4, M.white, 20);                             // seat
+}
+function fVanity(F, y, H, basins) {
+  fCabinet(F, y, H, M.wood, { top: M.white, plinth: 0, doorW: 0.5, handles: false, topT: 0.04 });
+  const { W, D, cyl } = F;
+  for (let i = 0; i < basins; i++) { const u = W * (i + 0.5) / basins; cyl(u, D * 0.5, 0.2, y + H, y + H + 0.12, M.white, 24, 0.22); cyl(u, D * 0.5, 0.17, y + H + 0.115, y + H + 0.12, M.dark, 24); }
+}
+function fShelves(F, y, H, m, books) {
+  const { W, D, box } = F, n = Math.max(3, Math.round(H / 0.38));
+  box(0, 0.02, 0, D, y, y + H, m); box(W - 0.02, W, 0, D, y, y + H, m); box(0, W, 0, 0.015, y, y + H, m);
+  const cols = [M.dark, M.white, M.chair, M.wood, M.fabric];
+  for (let i = 0; i <= n; i++) {
+    const yy = y + 0.05 + (H - 0.07) * i / n; box(0.02, W - 0.02, 0.015, D, yy, yy + 0.02, m);
+    if (books && i < n) { let u = 0.04, k = i * 7;
+      while (u < W - 0.1) { const bw = 0.03 + ((k * 37) % 5) * 0.008, bh = 0.2 + ((k * 13) % 7) * 0.015;
+        if ((k * 11) % 9 > 1) box(u, u + bw, 0.03, D - 0.03, yy + 0.02, yy + 0.02 + bh, cols[k % cols.length], false);
+        u += bw + 0.004; k++; } }
+  }
+}
+function fOven(f, parent) {                                  // wood-fired oven: stone base, dome, flue
+  const side = f.back || backSide(f, false), F = fframe(f, side, parent), { W, D, box } = F, y = f.y0, by = y + 0.9;
+  box(0, W, 0, D, y, by, M.stone);
+  box(-0.03, W + 0.03, -0.03, D + 0.03, by, by + 0.08, M.stone_top);
+  const [cx, cz] = F.world(W / 2, D * 0.45), r = Math.min(W, D) * 0.46;
+  const g = new THREE.SphereGeometry(r, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2); g.scale(1, 0.85, 1); g.translate(cx, by + 0.08, cz);
+  addMesh(parent, g, M.render, true, true);
+  const vf = D * 0.45 + r * 0.97; box(W / 2 - 0.2, W / 2 + 0.2, vf - 0.08, vf + 0.02, by + 0.08, by + 0.36, M.dark, false);   // mouth
+  F.box(W / 2 - 0.25, W / 2 + 0.25, D * 0.45 + r * 0.8, D + 0.08, by + 0.08, by + 0.12, M.stone_top);   // landing slab
+  F.cyl(W / 2, D * 0.45 + r * 0.55, 0.07, by + 0.08 + r * 0.6, by + 0.08 + r * 0.85 + 0.55, M.dark, 12);   // flue
+}
+function furnModel(f, parent) {
+  const n = (f.name || '').toLowerCase(), [x0, z0, x1, z1] = f.b, y = f.y0, H = f.h, m = M[f.mat] || M.white;
+  const plain = () => addMesh(parent, mbox(x0, x1, y, y + Math.max(0.01, H), z0, z1), m, H > 0.05, true);
+  const F = (s = backSide(f)) => fframe(f, s, parent);
+  if (n.startsWith('expositor') || n.startsWith('teto') || f.mat === 'rug' || H < 0.06 || /base de duche|churrasqueira \(base\)/.test(n)) {
+    plain();
+    if (/base de duche/.test(n)) { const G = F(); G.box(G.W - 0.01, G.W, 0, G.D, y + H, y + 2.0, M.glass, false); }   // glass screen on the open side
+    return;
+  }
+  if (/forno a lenha|wood.?fired/.test(n)) return fOven(f, parent);
+  if (/^carro|^car\b/.test(n)) return fCar(f, parent);
+  if (/^cama|bed\b/.test(n)) return fBed(f, parent);
+  if (/cabeceira|headboard/.test(n)) { const G = F(false); G.box(0, G.W, 0, G.D, y + 0.25, y + H, M.fabric); G.box(0.02, G.W - 0.02, 0, G.D * 0.4, y, y + 0.25, M.dark, false); return; }
+  if (/sofá|sofa/.test(n)) {
+    const G = F(), touch = o => o !== f && /sofá|sofa/i.test(o.name || '') && !(o.b[0] > x1 + 0.02 || o.b[2] < x0 - 0.02 || o.b[1] > z1 + 0.02 || o.b[3] < z0 - 0.02);
+    const others = LAY.furniture.filter(touch), ends = [G.world(0.05, G.D / 2), G.world(G.W - 0.05, G.D / 2)];
+    const free = ([px, pz]) => !others.some(o => px > o.b[0] - 0.1 && px < o.b[2] + 0.1 && pz > o.b[1] - 0.1 && pz < o.b[3] + 0.1);
+    return fSofa(f, G, y, H, { l: free(ends[0]) && !/perna|leg/.test(n), r: free(ends[1]) && !/perna|leg/.test(n) });
+  }
+  if (/espreguiçadeira|lounger/.test(n) || (f.mat === 'white' && Math.abs(H - 0.35) < 0.01)) {
+    const G = F('n'), { W, D, box } = G; box(0, W, 0.5, D, y + 0.18, y + 0.3, M.white);
+    for (const [u, v] of [[0.05, 0.55], [W - 0.05, 0.55], [0.05, D - 0.05], [W - 0.05, D - 0.05]]) fLeg(G, u, v, y, y + 0.18, M.dark, 0.03);
+    const back = mbox(0, W, 0, 0.08, 0, 0.62); back.rotateX(-0.9); const [bx, bz] = G.world(0, 0.5); back.translate(Math.min(x0, x1), y + 0.28, bz);
+    addMesh(parent, back, M.white); return;
+  }
+  if (/banco ilha|stool/.test(n)) { const G = F(); G.cyl(G.W / 2, G.D / 2, 0.02, y, y + 0.66, M.dark, 10); G.cyl(G.W / 2, G.D / 2, 0.18, y, y + 0.02, M.dark, 20); G.cyl(G.W / 2, G.D / 2, 0.19, y + 0.66, y + 0.71, M.chair, 20); return; }
+  if (f.mat === 'chair' || /cadeira|chair/.test(n)) {
+    // back toward the side away from the nearest table
+    const tabs = LAY.furniture.filter(o => /mesa|table|ilha/i.test(o.name || ''));
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    let side = 'n';
+    if (tabs.length) { const t = tabs.reduce((a, o) => { const d = Math.hypot((o.b[0] + o.b[2]) / 2 - cx, (o.b[1] + o.b[3]) / 2 - cz); return d < a[0] ? [d, o] : a; }, [1e9, null])[1];
+      const dx = Math.max(t.b[0] - cx, 0, cx - t.b[2]) * Math.sign((t.b[0] + t.b[2]) / 2 - cx), dz = Math.max(t.b[1] - cz, 0, cz - t.b[3]) * Math.sign((t.b[1] + t.b[3]) / 2 - cz);
+      side = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'w' : 'e') : (dz > 0 ? 'n' : 's'); }
+    return fChair(fframe(f, side, parent), y, Math.max(H, 0.85), 0.45, M.chair);
+  }
+  if (/sanita|toilet|wc\b/.test(n)) return fToilet(F(false), y);
+  if (/banheira|bath/.test(n)) { const G = F(), { W, D, box } = G; box(0, W, 0, 0.07, y, y + H, M.white); box(0, W, D - 0.07, D, y, y + H, M.white); box(0, 0.07, 0, D, y, y + H, M.white); box(W - 0.07, W, 0, D, y, y + H, M.white); box(0.07, W - 0.07, 0.07, D - 0.07, y, y + 0.12, M.white); return; }
+  if (/lavatório|bancada dupla|vanity|basin/.test(n)) return fVanity(F(), y, H, /dupla|double/.test(n) ? 2 : 1);
+  if (/bancada cozinha|kitchen/.test(n) || f.mat === 'kitchen' && H < 1.2) {
+    const G = F(); fCabinet(G, y, H, M.kitchen, { top: M.stone_top });
+    const { W, D, box } = G; box(W * 0.62, W * 0.62 + 0.6, 0.12, 0.5, y + H, y + H + 0.008, M.dark, false);      // hob
+    box(W * 0.25, W * 0.25 + 0.7, 0.1, 0.48, y + H - 0.006, y + H + 0.002, M.frame, false);                     // sink
+    G.cyl(W * 0.25 + 0.35, 0.05, 0.015, y + H, y + H + 0.3, M.frame, 8); return;
+  }
+  if (/colunas|frigorífico|tall/.test(n) || (f.mat === 'kitchen' && H >= 1.2)) {
+    const G = F(); fCabinet(G, y, H, M.kitchen, { doorW: 0.6 });
+    G.box(G.W / 2 + 0.03, G.W - 0.03, G.D - 0.02, G.D, y + 0.85, y + 1.45, M.dark, false); return;            // built-in oven + microwave
+  }
+  if (/ilha|island/.test(n)) { const G = F(), { W, D, box } = G; fCabinet(G, y, H, M.kitchen, { top: null, plinth: 0.1 });
+    box(0, W, -0.0, D + 0.25, y + H - 0.03, y + H + 0.01, M.stone_top); return; }                            // worktop overhang for the stools
+  if (/bancada|worktop|máquinas/.test(n)) { const G = F(); fCabinet(G, y, H, f.mat === 'stone_top' ? M.stone : M.white, { top: M.stone_top });
+    if (/máquinas|lavandaria/.test(n)) for (const u of [0.35, 1.0]) G.box(u - 0.17, u + 0.17, G.D - 0.021, G.D - 0.01, y + 0.25, y + 0.59, M.glass, false);   // machine doors
+    return; }
+  if (/roupeiro|wardrobe|armário|armario/.test(n) || f.mat === 'wardrobe') return fCabinet(F(), y, H, M.wardrobe, { plinth: 0.06, doorW: 0.5 });
+  if (/aparador|sideboard/.test(n)) return fCabinet(F(), y, H, m, { top: M.wood, plinth: 0.12, doorW: 0.5 });
+  if (/móvel tv|tv/.test(n)) { const G = F(); fCabinet(G, y, H, M.dark, { top: M.wood, plinth: 0.08, doorW: 0.5, handles: false });
+    const { W, box } = G; box(W / 2 - 0.62, W / 2 + 0.62, 0.0, 0.04, y + 0.95, y + 1.66, M.dark); box(W / 2 - 0.6, W / 2 + 0.6, 0.04, 0.045, y + 0.97, y + 1.64, M.glass, false); return; }
+  if (/estante|prateleira|shelf|shelves/.test(n)) return fShelves(F(), y, H, m, /estante$|books|livros/.test(n) || n === 'estante');
+  if (/secretária|desk/.test(n)) { const G = F(), { W, D, box } = G; box(0, W, 0, D, y + H - 0.04, y + H, M.wood);
+    box(0, 0.03, 0.02, D - 0.02, y, y + H - 0.04, M.wood); box(W - 0.45, W - 0.42, 0.02, D - 0.02, y, y + H - 0.04, M.wood);
+    box(W - 0.42, W, 0.02, D - 0.02, y + 0.05, y + H - 0.04, M.white);                                          // drawer unit
+    box(W / 2 - 0.27, W / 2 + 0.27, 0.06, 0.08, y + H, y + H + 0.36, M.dark); return; }                           // screen
+  if (/mesa|table/.test(n) || (f.mat === 'wood' && H <= 0.8 && (x1 - x0) * (z1 - z0) > 0.5)) {
+    if (H < 0.5) { const G = F(); fTable(G, y, H, M.wood, M.dark, { t: 0.05, inset: 0.06 }); return; }               // coffee table
+    return fTable(F(), y, H, M.wood, M.dark);
+  }
+  if (f.mat === 'wood' && H <= 0.7 && (x1 - x0) * (z1 - z0) <= 0.5) {                                            // bedside table + lamp
+    const G = F(); fCabinet(G, y, H, M.wood, { plinth: 0.05, doorW: 1, handles: false });
+    G.box(0.04, G.W - 0.04, G.D - 0.021, G.D - 0.017, y + H - 0.17, y + H - 0.165, M.dark, false);
+    G.cyl(G.W / 2, G.D / 2, 0.025, y + H, y + H + 0.28, M.dark, 10); G.cyl(G.W / 2, G.D / 2, 0.13, y + H + 0.22, y + H + 0.42, M.white, 20, 0.09); return;
+  }
+  plain();
+}
+// cars: f.front = side the bonnet points to ('e' = east); f.color = paint (hex)
+function fCar(f, parent) {
+  const front = f.front || 'e', rear = { e: 'w', w: 'e', n: 's', s: 'n' }[front], F = fframe(f, rear, parent), { W, D, box } = F, y = f.y0;
+  const paint = new THREE.MeshPhysicalMaterial({ color: f.color || 0x8a9097, metalness: 0.6, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08 }); paint.name = 'Car_Paint';
+  const tyre = M.dark, red = new THREE.MeshStandardMaterial({ color: 0x8a0f0f, emissive: 0x400000, roughness: 0.4 }); red.name = 'Car_Taillight';
+  box(0.04, W - 0.04, 0.06, D - 0.06, y + 0.28, y + 0.62, paint);                       // lower body
+  box(0.06, W - 0.06, 0.12, D - 0.25, y + 0.62, y + 0.82, paint);                       // waist (bonnet + boot)
+  box(0.12, W - 0.12, D * 0.28, D * 0.7, y + 0.82, y + 1.36, M.glass, false);           // glasshouse
+  for (const v of [D * 0.28, D * 0.5, D * 0.7 - 0.06]) box(0.12, W - 0.12, v, v + 0.06, y + 0.82, y + 1.36, paint);   // pillars
+  box(0.14, W - 0.14, D * 0.3, D * 0.68, y + 1.36, y + 1.42, paint);                    // roof
+  box(0.08, W - 0.08, 0, 0.08, y + 0.25, y + 0.48, M.dark); box(0.08, W - 0.08, D - 0.08, D, y + 0.25, y + 0.48, M.dark);   // bumpers
+  box(0.12, 0.42, D - 0.02, D + 0.005, y + 0.6, y + 0.7, M.led, false); box(W - 0.42, W - 0.12, D - 0.02, D + 0.005, y + 0.6, y + 0.7, M.led, false);
+  box(0.1, 0.38, -0.005, 0.02, y + 0.6, y + 0.7, red, false); box(W - 0.38, W - 0.1, -0.005, 0.02, y + 0.6, y + 0.7, red, false);
+  const alongX = rear === 'n' || rear === 's';
+  for (const v of [0.85, D - 0.95]) for (const u of [0.13, W - 0.13]) {
+    const [x, z] = F.world(u, v), g = new THREE.CylinderGeometry(0.33, 0.33, 0.22, 24);
+    if (alongX) g.rotateZ(Math.PI / 2); else g.rotateX(Math.PI / 2); g.translate(x, y + 0.33, z); addMesh(parent, g, tyre);
+    const hb = new THREE.CylinderGeometry(0.2, 0.2, 0.23, 16); if (alongX) hb.rotateZ(Math.PI / 2); else hb.rotateX(Math.PI / 2); hb.translate(x, y + 0.33, z); addMesh(parent, hb, M.frame, false);
+  }
+}
+for (const f of LAY.furniture) furnModel(f, sg(f, furniture));
 
 // ---------- site works ----------
 function plotZRange(x) {

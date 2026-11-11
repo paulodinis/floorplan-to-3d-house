@@ -38,7 +38,7 @@ def main():
         drv = os.path.join(D, '_pipeline_build.py')
         open(drv, 'w').write(
             "import json, runpy\n"
-            f"P = json.load(open(r'{params}', encoding='utf-8'))\n"
+            f"P = json.load(open(r'{params}', encoding='utf-8')); P['render'] = False   # pipeline.py renders the frames itself\n"
             f"r = runpy.run_path(r'{os.path.join(SD, 'run_all.py')}', init_globals={{'PARAMS': P}})['result']\n"
             f"json.dump(r, open(r'{os.path.join(D, '_build_result.json')}', 'w'), indent=1)\n")
         subprocess.run([B, '-b', '--python', drv], stdout=open(os.path.join(D, 'pipeline_build.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)

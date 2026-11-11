@@ -20,7 +20,7 @@ Units are metres. Scene axes: **x east, z south** (sheet axes), **y up**, with y
 | `gate`, `ped_gate` | `{z0, z1}` | Gaps in the boundary wall on the road side (west). |
 | `zones` | `{drive, stone, gravel, beds: [polygon]}` | Ground finishes; later layers win. |
 | `trees` | `[{x, z, r}]` | Olive-type trees; `r` is the crown radius. |
-| `furniture` | `[{b: rect, y0, h, mat, name}]` | Boxes. Names containing sofa, rug, coffee table or lounger get special treatment. |
+| `furniture` | `[{b: rect, y0, h, mat, name, back?, head?, front?, color?}]` | Footprint boxes drawn as simple models chosen by `name` (pt/en): bed/cama, headboard/cabeceira, sofa/sofá, chair/cadeira, stool/banco ilha, table/mesa, desk/secretária, wardrobe/roupeiro, kitchen worktop and tall units, island/ilha, vanity/lavatório, toilet/sanita, bath/banheira, shower/base de duche, shelves/estante, TV unit, lounger/espreguiçadeira, wood-fired oven/forno a lenha, car/carro; small `wood` boxes become bedside tables with a lamp. `back` ('n'/'s'/'e'/'w') = side against the wall (default: the side nearest a wall); `head` for beds; `front` + `color` (hex) for cars. Anything else stays a box. |
 | `slats` | `[{x0, x1, z0, z1, y0, y1}]` | Timber slat panels on façades. |
 | `room_lights` | `[[x, z, y]]` | Interior lights. |
 | `railings` | `[{a, b, y, h, storey}]` | Glass balustrades (`h` default 1.0) on void edges and balconies. Count as guards in the QA and block walk mode. |

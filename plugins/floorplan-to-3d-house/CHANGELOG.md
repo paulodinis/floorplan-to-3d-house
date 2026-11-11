@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.8.0 (2026-11-11)
+- **Furniture models instead of boxes** (3D page and GLB): each layout item keeps its footprint and gets a simple model picked by its name (pt/en): beds with frame, mattress, duvet and pillows; sofas with seat and back cushions and arms on free ends; chairs and stools; tables and desk; kitchen units with plinth, doors, handles, worktop, sink and hob; tall units with oven; wardrobes; vanities with basins; toilet, bath, shower screen; bookshelves with books; TV on the wall; bedside tables with lamps; loungers. New: wood-fired oven (`forno a lenha`) and cars (`carro`, with `front` and `color`). The back of a piece goes to the nearest wall, or set `back` / `head`.
+- **Garage door open:** an opening of kind `garage` with `"open": true` is drawn rolled up.
+- **`LED_Strip` material** (always lit) for display shelves.
+- **Blender, optional passes** (`"extra_passes"` in params.json):
+  - `soften.py`: rounded edges on furniture and cars, puffier cushions and duvets, fabric weave and wrinkles;
+  - `lens.py`: animated focal length (`"lens_keys"`), e.g. 16 mm indoors and 22 mm outside.
+- **`camera_script.py --eye`**: walking eye height (default 1.6 m; 1.5 m for a 1.60 m person).
+- **Fix:** `pipeline.py` builds with `render: false`. With `"render": true` in params.json a second, hidden render ran during the build and doubled the time per frame.
+
 ## 1.7.0 (2026-11-09)
 - **Clock up to midnight with a night look:** the sun slider runs from 06:00 to 24:00.
   - After dusk: moonlight, dark sky and fog, no sky reflections.

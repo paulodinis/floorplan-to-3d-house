@@ -130,3 +130,10 @@ Lessons from that video:
 - Live session: "Cannot connect to Blender at localhost:9876". Blender is closed, or its MCP add-on server isn't started. Ask the user to open Blender and start the add-on server.
 - Background mode (`execute_blender_code_for_cli`) needs `BLENDER_PATH` in the MCP's settings. `pipeline.py` doesn't need it: it takes the executable from `bpy.app.binary_path` of the live session.
 - Doors that open only in part: `doors.py` groups loose parts by shared edges *and* coincident vertices (the GLB writes split vertices); `suspicious` in its result lists leaves whose size doesn't match the opening.
+
+## Optional passes (1.8.0)
+- `"extra_passes": ["soften.py", "lens.py"]` in params.json runs extra passes after `doors.py`.
+- `soften.py`: rounded edges on furniture and cars (Bevel, angle-limited), puffier cushions, pillows and duvets, fabric weave + wrinkles as bump. Radii in `"soften": {"edge": 0.012, "soft": 0.035, "car": 0.06}`. About +10 % render time.
+- `lens.py`: animates the focal length from `"lens_keys": [[frame, mm], ...]`; use 16 mm indoors (from the front door to the exit) and 22 mm outside, so small rooms show more than one wall.
+- `camera_script.py --eye 1.5` sets the walking eye height (default 1.6 m; 1.5 m = eyes of a 1.60 m person).
+- `pipeline.py` always builds with `render: false`: it renders the frames itself. (Before 1.8.0, `"render": true` in params.json started a second, hidden render during the build and doubled the time per frame.)
