@@ -361,9 +361,9 @@ print(json.dumps(dict(frames=F, keys=len(keys), doors=len(DOORS), stops=[f"{s['n
 
 # ---------- preview ----------
 if A.preview:
-    from PIL import Image, ImageDraw, ImageFont
-    FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-    fnt = lambda s: ImageFont.truetype(FONT, s)
+    from PIL import Image, ImageDraw
+    import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
+    fnt = font
     W2, H2 = 1700, 1000; im = Image.new('RGB', (W2, H2), 'white'); d = ImageDraw.Draw(im)
     def panel(x0, y0, w, h, bx):
         X0_, Z0_, X1_, Z1_ = bx; s = min(w / (X1_ - X0_), h / (Z1_ - Z0_))

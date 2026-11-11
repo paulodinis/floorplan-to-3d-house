@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, opens the model in Blender, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.8.0"
+  version: "1.8.1"
 ---
 
 # Floor plan → 2D plan (approval) → 3D model → Blender → video
@@ -34,7 +34,7 @@ Every change, at any point, goes back to a new 2D plan `v<n+1>` and its stop. Ne
 ## Files
 Paths are relative to this skill's base directory. `validate-plan` and `drone-video` reuse these scripts.
 - `scripts/setup_workspace.sh`: workspace setup (textures, ezdxf, three.js r160 test files).
-- `scripts/cloud/`: `pdf2dxf.py`, `extract3d.py`, `masks.py`, `masks2.py` (inputs); `validate_layout.py`, `plan2d.py`, `plan2d_simple.py`, `storey_filter.py` (plan + QA); `build_page.py`, `export.js`, `tris2dxf.py`, `elevations.py`, `sun_report.py`, `style_from_colors.py` (3D + exports); `camera_path.py`, `camera_script.py` (video paths); `pack_work.py`; `shot2.js`, `navtest.js` (debugging); `gaps.py`, `tex.py`.
+- `scripts/cloud/`: `pdf2dxf.py`, `extract3d.py`, `masks.py`, `masks2.py` (inputs); `validate_layout.py`, `plan2d.py`, `plan2d_simple.py`, `storey_filter.py` (plan + QA); `build_page.py`, `export.js`, `tris2dxf.py`, `elevations.py`, `sun_report.py`, `style_from_colors.py` (3D + exports); `camera_path.py`, `camera_script.py` (video paths); `fonts.py` (font lookup shared by the PNG sheets); `pack_work.py`; `shot2.js`, `navtest.js` (debugging); `gaps.py`, `tex.py`.
 - `scripts/web/`: the 3D page engine. `scripts/blender/`: `pipeline.py` (build / test / final in one call), `run_all.py` + passes, `doors.py`, `open_in_blender.py`, `encode.py`.
 - `styles/`: presets. `examples/`: a complete one-storey and a two-storey project.
 - `references/`: `intake.md`, `inputs.md` (Steps 1–3), `plan-and-grid.md` (Step 4), `exports.md` (Steps 6–7, pitfalls), `blender-pipeline.md` (Blender, video), `layout-schema.md`, `style-guide.md`, `multi-storey.md`, `qa-checklist.md`.

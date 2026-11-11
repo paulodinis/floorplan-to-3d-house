@@ -316,10 +316,8 @@ print(json.dumps({k: v for k, v in res.items() if k not in ('camera_keys', 'door
 
 # ---------- preview: orbit (left) + the walk per storey on the reference grid (right) ----------
 if A.preview:
-    from PIL import Image, ImageDraw, ImageFont
-    def font(sz, b=False):
-        try: return ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans%s.ttf' % ('-Bold' if b else ''), sz)
-        except OSError: return ImageFont.load_default()
+    from PIL import Image, ImageDraw
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
     TX = {'en': dict(orbit='360° orbit', rad='radius', h='height', start='start / end', cw='clockwise', ccw='anticlockwise', storey='Storey',
                      stops='Stops', skipped='Not visited', front='front door', hint='To change the path, say e.g.: "skip 5 and 7" · "living room first" · "orbit closer / higher" · "the other way round"',
                      title='Video path — %d s'),

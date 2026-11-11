@@ -1,15 +1,22 @@
 {
   "name": "paulodinis",
   "owner": { "name": "Paulo Silva", "url": "https://github.com/paulodinis" },
-  "metadata": { "description": "Claude plugins by Paulo Silva" },
+  "metadata": {
+    "description": "Claude plugins by Paulo Silva — architecture and home-design tooling.",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
       "name": "floorplan-to-3d-house",
       "source": "./plugins/floorplan-to-3d-house",
-      "description": "House plan (PDF/DXF) → 2D approval plan → interactive 3D model → GLB/DXF exports → optional Blender drone or walkthrough video.",
-      "version": "1.8.0",
+      "description": "Drop in a site plan or floor plan (vector PDF or DXF) and walk through your future house. Claude extracts a clean DXF, drafts a dimensioned 2D plan for your approval, then builds an interactive 3D model with orbit, walk and drone modes, a sun study, elevations and a daylight report. Exports GLB and 3D DXF for Blender, SketchUp or Twinmotion, and can render a photoreal drone or walkthrough video in Blender on your own machine. One or two storeys, style presets from your reference photos. Indicative design only — not for permits.",
+      "version": "1.8.1",
+      "author": { "name": "Paulo Silva", "url": "https://github.com/paulodinis" },
+      "homepage": "https://github.com/paulodinis/floorplan-to-3d-house",
+      "repository": "https://github.com/paulodinis/floorplan-to-3d-house",
       "license": "MIT",
-      "keywords": ["architecture", "floor plan", "dxf", "3d", "glb", "blender"]
+      "category": "design",
+      "keywords": ["architecture", "floor plan", "site plan", "dxf", "3d", "glb", "blender", "house design", "walkthrough", "sun study"]
     }
   ]
 }

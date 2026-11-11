@@ -7,7 +7,7 @@ elevations.dxf (views side by side, layers ELEV-*, SECT-*, ANNO). Orthographic, 
 Labels use the true bearing of each façade (north_deg = true north clockwise from sheet-up).
 """
 import json, math, os, sys
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else 'export/elevations'
 os.makedirs(OUT, exist_ok=True)
@@ -122,8 +122,8 @@ VIEWS = {  # name: (outward normal dx, dz, u(x, z), depth(x, z) larger = farther
 PX = 40          # px per metre
 COL = dict(wall=(246, 244, 238), stone=(222, 210, 186), timber=(176, 124, 78), roof=(74, 80, 90), roof2=(96, 102, 112), glass=(150, 190, 220),
            door=(120, 84, 56), garage=(170, 120, 76), open=(60, 60, 60), slab=(200, 200, 196), ground=(232, 236, 222), line=(30, 30, 30), cut=(20, 20, 20))
-FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
-f = lambda sz: ImageFont.truetype(FONT, sz)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
+f = font
 dxf_items = []   # (layer, polyline points in metres (u, y), closed, view offset index)
 
 

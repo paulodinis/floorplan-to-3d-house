@@ -14,7 +14,7 @@ Model (state it to the user, it is indicative):
 """
 import json, math, os, sys
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 OUT = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith('--') else 'export/sun'
 arg = lambda k, d: float(sys.argv[sys.argv.index(k) + 1]) if k in sys.argv else d
@@ -241,10 +241,8 @@ json.dump({k: dict(hours=v['hours'], faces=sorted(v['faces']), dec_first=v['firs
 
 # ground maps: 3 panels
 PXM = 6; W = int((max(px) - min(px)) * PXM) + 40; H = int((max(pz) - min(pz)) * PXM) + 70
-try:
-    F = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 15); FS = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 12)
-except OSError:
-    F = FS = ImageFont.load_default()
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
+F, FS = font(15), font(12)
 sheet = Image.new('RGB', (W * 3, H + 40), 'white'); dr = ImageDraw.Draw(sheet)
 vmax = max(1.0, float(ground.max()))
 

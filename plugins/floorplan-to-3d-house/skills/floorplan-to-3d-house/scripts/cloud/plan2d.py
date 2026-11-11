@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.environ.get('EZDXF_SRC', 'ezdxf-src/src'))
 import ezdxf
 from ezdxf.enums import TextEntityAlignment
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 # LAYOUT_JSON: e.g. one storey written by storey_filter.py
 L = json.load(open(os.environ.get('LAYOUT_JSON', 'site3d/layout.json')))
 site = json.load(open('site3d/site.json'))
@@ -145,8 +145,8 @@ for rf in L['roofs']:
 d.line([Q(*p) for p in L['plot'] + [L['plot'][0]]], fill=(220, 0, 0), width=3)
 for t_ in L['trees']:
     d.ellipse([Q(t_['x'] - t_['r'], t_['z'] - t_['r']), Q(t_['x'] + t_['r'], t_['z'] + t_['r'])], outline=(60, 120, 40), width=2)
-try: fnt = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', max(13, int(S * 0.3)))
-except Exception: fnt = None
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
+fnt = font(max(13, int(S * 0.3)))
 for kind, r in png_items:
     if kind == 'label':
         cx, cz, n, a = r; x, y = Q(cx, cz); d.text((x, y), f'{n}\n{a:.1f} m²', fill=(0, 0, 0), anchor='mm', font=fnt, align='center')

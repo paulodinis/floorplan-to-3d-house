@@ -4,7 +4,7 @@ Mostra: paredes, vãos (portas com arco, janelas, portões), divisões e áreas,
 plot boundary, ceded strip, road, dimensioned setbacks, levels, north, scale bar and area table.
 Language: PROJECT_JSON=project.json ("lang": en | pt-PT)."""
 import sys, json, math, os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 L = json.load(open(sys.argv[1])); site = json.load(open(sys.argv[2])); OUT = sys.argv[3]
 DXF = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] not in ('', '-') else None
@@ -69,8 +69,8 @@ TABLE_H = 400                                  # 9+ volumes fit with the total r
 W, H = int((X1 - X0) * S), int((Z1 - Z0) * S) + TABLE_H
 im = Image.new('RGB', (W, H), (255, 255, 255)); d = ImageDraw.Draw(im)
 Q = lambda x, z: ((x - X0) * S, (z - Z0) * S)
-FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'; FONTB = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-f = lambda sz, b=False: ImageFont.truetype(FONTB if b else FONT, sz)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))); from fonts import font
+f = font
 F_ROOM, F_AREA, F_SMALL, F_DIM, F_TITLE = f(19, True), f(17), f(15), f(17, True), f(26, True)
 
 def dashed(pts, fill, width, dash=14, gap=9):

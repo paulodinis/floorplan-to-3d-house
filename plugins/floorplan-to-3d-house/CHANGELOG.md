@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.8.1 (2026-11-11)
+- **Fix (#2): fonts on macOS and Windows.** `plan2d_simple.py`, `elevations.py` and `camera_script.py --preview` aborted with `OSError: cannot open resource` where `/usr/share/fonts/truetype/dejavu/` doesn't exist; `plan2d.py`, `sun_report.py` and `camera_path.py` ran but lost their labels or fell back to a bitmap font. All six now take their fonts from the new `scripts/cloud/fonts.py`: DejaVu (Linux), Arial Unicode / Arial (macOS) or Segoe UI (Windows), preferring a font that has every glyph the sheets draw (the `▽` level mark is missing from Arial and Segoe UI), then Pillow's bundled font. `FLOORPLAN_FONT` / `FLOORPLAN_FONT_BOLD` pick a font explicitly.
+
 ## 1.8.0 (2026-11-11)
 - **Furniture models instead of boxes** (3D page and GLB): each layout item keeps its footprint and gets a simple model picked by its name (pt/en): beds with frame, mattress, duvet and pillows; sofas with seat and back cushions and arms on free ends; chairs and stools; tables and desk; kitchen units with plinth, doors, handles, worktop, sink and hob; tall units with oven; wardrobes; vanities with basins; toilet, bath, shower screen; bookshelves with books; TV on the wall; bedside tables with lamps; loungers. New: wood-fired oven (`forno a lenha`) and cars (`carro`, with `front` and `color`). The back of a piece goes to the nearest wall, or set `back` / `head`.
 - **Garage door open:** an opening of kind `garage` with `"open": true` is drawn rolled up.
