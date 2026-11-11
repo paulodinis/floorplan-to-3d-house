@@ -8,6 +8,7 @@
   - `soften.py`: rounded edges on furniture and cars, puffier cushions and duvets, fabric weave and wrinkles;
   - `lens.py`: animated focal length (`"lens_keys"`), e.g. 16 mm indoors and 22 mm outside.
 - **`camera_script.py --eye`**: walking eye height (default 1.6 m; 1.5 m for a 1.60 m person).
+- **Fix:** `camera_script.py` no longer makes the eye jump to the height of a later step (e.g. 45 m after an `aerial`) on outdoor `move` legs, and a `strafe` turns its heading toward the look point instead of sweeping the target past the camera (a frame looking straight at the ground).
 - **Fix:** `pipeline.py` builds with `render: false`. With `"render": true` in params.json a second, hidden render ran during the build and doubled the time per frame.
 
 ## 1.7.0 (2026-11-09)

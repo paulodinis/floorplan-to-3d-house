@@ -142,9 +142,11 @@ if A.site:
 # ---------- state machine ----------
 segs, labels, checks, doors = [], [], [], []     # segs: (dur, eye(u), target(u)); doors: (seg index, u, op, toward)
 st = dict(p=None, y=None, h=0.0)                 # position (x, z), eye y, heading deg
-def eye_y(p, extra=0.0):
-    fy = floor_y(p)
-    return (fy if fy is not None else (st['y'] - EYE if st['y'] is not None else 0.0)) + EYE + extra
+def eye_y(p, extra=0.0, fallback=None):
+    # outside any floor: keep the eye height the step started with (fallback), never the live state, which is the
+    # state at the END of the script when the lambdas are sampled (that gave 45 m spikes after an aerial step)
+    fy = floor_y(p); y_in = fallback if fallback is not None else st['y']
+    return (fy if fy is not None else (y_in - EYE if y_in is not None else 0.0)) + EYE + extra
 def look_at(e, h, d=3.0):
     r = math.radians(h); return (e[0] + math.cos(r) * d, e[1] - LOOKD * d, e[2] + math.sin(r) * d)
 def heading(a, b): return math.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))
@@ -192,14 +194,14 @@ def add_move(points, dur, look_fixed=None, keep_heading=False):
     for q in points[1:]: pts += route(pts[-1], q)[1:]
     if len(pts) > 2 and math.dist(pts[-2], pts[-1]) < 0.3: pts.pop(-2)        # door-side stub right at the target
     lens = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]; tot = sum(lens) or 1e-9
-    h0 = st['h']
+    h0 = st['h']; y_in = st['y']
     def at(u):
         s = ease(u) * tot
         for i, l in enumerate(lens):
             if s <= l or i == len(lens) - 1:
                 v = s / l if l else 0; return lerp(pts[i], pts[i + 1], min(1, v)), i
             s -= l
-    def eye(u): p, _ = at(u); return (p[0], eye_y(p), p[1])
+    def eye(u): p, _ = at(u); return (p[0], eye_y(p, fallback=y_in), p[1])
     def tgt(u):
         e = eye(u)
         if look_fixed: return look_fixed
@@ -227,7 +229,7 @@ def add_move(points, dur, look_fixed=None, keep_heading=False):
             if cross(pts[i], pts[i + 1], wa, wb) is not None and min(seg_d(pts[i], wa, wb), seg_d(pts[i + 1], wa, wb)) > 0.01:
                 checks.append(f"step {len(labels)}: crosses a wall near x {(wa[0] + wb[0]) / 2:.1f}, z {(wa[1] + wb[1]) / 2:.1f}")
         acc += lens[i]
-    st['p'] = pts[-1]; st['y'] = eye_y(pts[-1])
+    st['p'] = pts[-1]; st['y'] = eye_y(pts[-1], fallback=y_in)
     if not look_fixed and not keep_heading and len(pts) > 1:              # heading of the last real leg (skip tiny door-side stubs)
         j = next((i for i in range(len(pts) - 1, 0, -1) if math.dist(pts[i - 1], pts[i]) > 0.3), len(pts) - 1)
         st['h'] = heading(pts[j - 1], pts[j])
@@ -309,8 +311,11 @@ for s in steps:
                 if d <= l or i == len(lens) - 1:
                     q = lerp(pts[i], pts[i + 1], min(1, d / l if l else 0)); return (q[0], y0, q[1])
                 d -= l
-        t_prev = look_at((st['p'][0], y0, st['p'][1]), st['h'])
-        segs.append((dur, ep, lambda u, t_prev=t_prev, lk=lk, ly=ly: lerp(t_prev, (lk[0], ly, lk[1]), min(1, ease(u) * 2.5))))
+        def stg(u, ep=ep, lk=lk, ly=ly, hs=st['h']):          # turn the heading toward the look point (no target sweeping past the eye)
+            e = ep(u); w = min(1, ease(u) * 2.5); hl = heading((e[0], e[2]), lk); hh = hs + (turn(hs, hl) - hs) * w
+            dd = max(3.0, math.dist((e[0], e[2]), lk) * w + 3.0 * (1 - w)); r = math.radians(hh)
+            return (e[0] + math.cos(r) * dd, (e[1] - LOOKD * 3.0) * (1 - w) + ly * w, e[2] + math.sin(r) * dd)
+        segs.append((dur, ep, stg))
         st.update(p=pts[-1], h=heading(pts[-1], lk))
     elif do == 'aerial':
         e0 = (st['p'][0], st['y'], st['p'][1]); t0 = look_at(e0, st['h'])
