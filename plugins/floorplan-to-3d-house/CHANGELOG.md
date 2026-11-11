@@ -4,7 +4,7 @@
 Packaging for the plugin directory: nothing is downloaded and run at setup.
 - **three.js r160 bundled:** `three.module.js`, `OrbitControls.js`, `GLTFExporter.js` and `TextureUtils.js` ship unmodified in `scripts/web/three/` (MIT, licence alongside). `export.js`, `navtest.js` and `shot2.js` serve them from there; the work dir no longer needs `three/`. `RGBELoader` is no longer used.
 - **`setup_workspace.sh` downloads nothing:** it copies the textures and reports missing dependencies. ezdxf: `python3 -m pip install ezdxf==1.4.5`, or `EZDXF_SRC` pointing at a source tree where PyPI is blocked (`references/inputs.md`).
-- Plugin icon re-encoded at 512×512 (379 KB instead of 1.36 MB).
+- Plugin icon re-encoded at 480×480 (40 KB instead of 1.36 MB).
 
 ## 1.8.1 (2026-11-11)
 - **Fix (#2): fonts on macOS and Windows.** `plan2d_simple.py`, `elevations.py` and `camera_script.py --preview` aborted with `OSError: cannot open resource` where `/usr/share/fonts/truetype/dejavu/` doesn't exist; `plan2d.py`, `sun_report.py` and `camera_path.py` ran but lost their labels or fell back to a bitmap font. All six now take their fonts from the new `scripts/cloud/fonts.py`: DejaVu (Linux), Arial Unicode / Arial (macOS) or Segoe UI (Windows), preferring a font that has every glyph the sheets draw (the `▽` level mark is missing from Arial and Segoe UI), then Pillow's bundled font. `FLOORPLAN_FONT` / `FLOORPLAN_FONT_BOLD` pick a font explicitly.
@@ -115,7 +115,7 @@ Less context per project, same flow and the same approval stops.
   - `styles/` holds `portuguese-contemporary`, `white-minimal`, `rural-stone` (terracotta roof) and `nordic-timber`;
   - `project.json "style"` takes a preset name or an inline object;
   - `style_from_colors.py` turns colours sampled from style photos into a preset;
-  - the GLB carries the style into Blender; an optional `restyle` pass handles older GLBs.
+  - the GLB carries the style into Blender; older GLBs get it from an optional `restyle` step.
 - **Sun & daylight report:** `sun_report.py` computes direct-sun hours per room through its exterior glazing on 21 Mar / 21 Jun / 21 Dec, with occlusion by walls, roofs, the designed ground and trees. It writes ground sun-hour maps and flags rooms with little winter sun or long summer sun on west glazing.
 - **Two storeys:**
   - schema: `storey` on any element, `floors[].holes` for stair voids, `railings` and balconies;
