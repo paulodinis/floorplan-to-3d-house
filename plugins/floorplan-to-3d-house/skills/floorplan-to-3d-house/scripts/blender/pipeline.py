@@ -52,7 +52,7 @@ def main():
             save(stage='test', test_frames=fr)
             drv = os.path.join(D, '_pipeline_test.py')
             open(drv, 'w').write(TEST.replace('__D__', D).replace('__FR__', json.dumps(fr)))
-            subprocess.run([B, '-b', blend, '--python', drv], stdout=open(os.path.join(D, 'pipeline_test.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)
+            subprocess.run([B, '-b', blend, '--python-expr', GPU, '--python', drv], stdout=open(os.path.join(D, 'pipeline_test.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)
             tt = json.load(open(os.path.join(D, 'tests', 'times.json')))
             med = sorted(tt.values())[len(tt) // 2]
             res = P.get('res', [1600, 900]); smp = P.get('samples', 24)
@@ -67,7 +67,7 @@ def main():
                              stdout=open(os.path.join(D, 'pipeline_encode.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)
             save(stage='render', frames_total=n)
             t0 = time.time()
-            p = subprocess.Popen([B, '-b', blend, '-a'], stdout=open(os.path.join(D, 'pipeline_render.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)
+            p = subprocess.Popen([B, '-b', blend, '--python-expr', GPU] + (['-s', str(P['start_frame'])] if P.get('start_frame') else []) + ['-a'], stdout=open(os.path.join(D, 'pipeline_render.log'), 'w'), stderr=subprocess.STDOUT, creationflags=NOWIN)
             while p.poll() is None:
                 time.sleep(60)
                 done = len(glob.glob(os.path.join(D, 'frames', 'f_*.png')))
@@ -82,6 +82,18 @@ def main():
             save(stage='encode', ok=False, error='frames rendered, MP4 not written: see pipeline_encode.log')
     except BaseException:
         save(ok=False, error=traceback.format_exc()[-1500:])
+
+
+GPU = ("import bpy\n"                                    # background Blender opens the user's preferences: if the compute device
+       "p = bpy.context.preferences.addons['cycles'].preferences\n"   # there is 'None', Cycles silently renders on the CPU (4-5x slower)
+       "for t in ('OPTIX', 'CUDA', 'HIP', 'METAL', 'ONEAPI'):\n"
+       "    try:\n"
+       "        p.compute_device_type = t; p.get_devices()\n"
+       "        if any(d.type == t for d in p.devices): break\n"
+       "    except Exception: pass\n"
+       "for d in p.devices: d.use = d.type == p.compute_device_type\n"
+       "bpy.context.scene.cycles.device = 'GPU' if any(d.use for d in p.devices) else 'CPU'\n"
+       "print('RENDER_DEVICE', p.compute_device_type, [d.name for d in p.devices if d.use])\n")
 
 
 TEST = r'''import bpy, os, json, time, numpy as np

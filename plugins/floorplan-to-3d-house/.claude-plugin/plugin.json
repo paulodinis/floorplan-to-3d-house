@@ -1,6 +1,6 @@
 {
   "name": "floorplan-to-3d-house",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "description": "From a house plan (PDF/DXF) to a walkable 3D model: clean DXF, 2D approval plan, interactive 3D page with sun study, elevations and daylight report, GLB/3D-DXF exports, the model opened in Blender, and an optional photoreal drone or walkthrough video.",
   "author": { "name": "Paulo Silva", "url": "https://github.com/paulodinis" },
   "homepage": "https://github.com/paulodinis/floorplan-to-3d-house",

@@ -72,7 +72,7 @@ for n in leaf.node_tree.nodes:
         n.inputs[6].default_value = (0.11, 0.13, 0.075, 1); n.inputs[7].default_value = (0.22, 0.24, 0.17, 1)
 
 # 4) drop the outdoor furniture blocks (alpendre / bedroom terrace) — they read as fake boxes outdoors
-zones = [tuple(z) for z in P.get('outdoor_zones', [(3.4, 3.6, 13.0, 7.4), (-11.0, 4.4, -0.2, 6.4)])]
+zones = [tuple(z) for z in P.get('outdoor_zones', [])]          # furniture inside these rects is deleted (legacy; default: keep everything)
 removed = 0
 for ob in [o for o in bpy.data.objects if o.name.startswith('Furniture__')]:
     bm = bmesh.new(); bm.from_mesh(ob.data)

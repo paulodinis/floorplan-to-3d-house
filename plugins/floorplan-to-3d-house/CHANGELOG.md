@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.4 (2026-11-12)
+- **Fix: renders on the GPU.** A background Blender reads the user's preferences; with the compute device at "None", Cycles fell back to the CPU without a warning. `pipeline.py` now switches on OptiX (else CUDA / HIP / Metal / oneAPI) in the render and test processes, without saving the preferences: about 4–5× faster on an RTX 4060. New `"start_frame"` resumes a stopped render.
+- **Fix: sun position in the video.** The sky texture's sun was mirrored against the Sun lamp (`sun_rotation` is measured from +Y toward +X), so the sky glow and the sun disc did not match the shadows.
+- **Fix: outdoor furniture kept.** `outdoor_zones` defaulted to two rects from the reference project that deleted porch tables, sofas and loungers; the default is now none.
+- **New `daycycle.py`** (optional Blender pass): animates the time of day between two frames (sun, sky, exposure, moonlight), e.g. morning to night during the final aerial orbit.
+- **`camera_script.py --linear`:** constant speed inside each step, for an even walking pace.
+
 ## 1.8.3 (2026-11-11)
 Plugin directory checks, second round.
 - **`three.module.js` under 1 MiB:** the directory can't read files over 1 MiB. The bundled copy is reprinted without comments (esbuild, tab indentation), and its 161 GLSL string constants move verbatim to `scripts/web/three/three.shaderchunks.js` (985 KB + 143 KB). Same 416 exports and values as the npm build; `export.js`, `navtest.js` and `shot2.js` serve both files. Checked with the GLB export and the 5 renders of the bundled example.

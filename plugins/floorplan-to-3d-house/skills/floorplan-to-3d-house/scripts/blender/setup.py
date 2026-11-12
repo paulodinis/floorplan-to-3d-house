@@ -105,8 +105,8 @@ pick = next((t for t in ('MULTIPLE_SCATTERING', 'NISHITA', 'SINGLE_SCATTERING', 
 sky.sky_type = pick
 if hasattr(sky, 'sun_elevation'):
     sky.sun_elevation = alt
-    # Blender's sky: sun_rotation is measured around Z from +Y toward -X? derive from the vector instead
-    sky.sun_rotation = math.atan2(-sun_dir.x, sun_dir.y) % (2 * math.pi)
+    # Blender's sky: sun_rotation is measured around Z from +Y toward +X (checked: 90 deg puts the sun on +X)
+    sky.sun_rotation = math.atan2(sun_dir.x, sun_dir.y) % (2 * math.pi)
     for k, v in (('sun_disc', True), ('sun_size', math.radians(0.6)), ('sun_intensity', 0.6), ('altitude', 10.0), ('air_density', 1.0), ('dust_density', 2.5), ('ozone_density', 1.0)):
         if hasattr(sky, k):
             try: setattr(sky, k, v)

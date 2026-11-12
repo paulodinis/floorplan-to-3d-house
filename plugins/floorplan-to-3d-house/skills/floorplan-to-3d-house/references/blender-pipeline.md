@@ -137,3 +137,10 @@ Lessons from that video:
 - `lens.py`: animates the focal length from `"lens_keys": [[frame, mm], ...]`; use 16 mm indoors (from the front door to the exit) and 22 mm outside, so small rooms show more than one wall.
 - `camera_script.py --eye 1.5` sets the walking eye height (default 1.6 m; 1.5 m = eyes of a 1.60 m person).
 - `pipeline.py` always builds with `render: false`: it renders the frames itself. (Before 1.8.0, `"render": true` in params.json started a second, hidden render during the build and doubled the time per frame.)
+
+## 1.8.4
+- **GPU rendering:** `pipeline.py` turns on the GPU (OptiX, else CUDA / HIP / Metal / oneAPI) inside the render and test processes, without saving the user's preferences. A background Blender reads the preferences; with the compute device at "None" Cycles rendered on the CPU, about 4–5× slower (RTX 4060: ~18 s → ~4 s per frame at 1600×900, 24 samples). The log prints `RENDER_DEVICE`. `"start_frame"` in params.json resumes a stopped render.
+- **Sun:** the sky's `sun_rotation` now matches the Sun lamp (Blender measures it from +Y toward +X); before, the sky glow and the sun disc sat mirrored against the shadows.
+- **`daycycle.py`** (optional pass): `"sun_anim": {"f0", "f1", "hour0", "hour1"}` animates the solar time between two frames: lamp direction, colour and strength, sky sun, background and exposure, with a soft moon at night. Use it for a day-to-night aerial orbit.
+- **`outdoor_zones`** now defaults to none: outdoor furniture (porch tables, sofas, loungers) is kept. Give rects only to delete furniture inside them.
+- **`camera_script.py --linear`**: constant speed inside each step. For a calm, even walk set each step's `t` from its length (≈ 1 m/s on foot, 3–4 m/s for the drone, turns ≈ 30°/s) and pass `--linear`; a light 0.5 s moving average on the keys smooths the corners.
