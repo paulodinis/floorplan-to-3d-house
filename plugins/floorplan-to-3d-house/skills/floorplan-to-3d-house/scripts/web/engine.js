@@ -6,6 +6,7 @@ import { traa } from 'three/addons/tsl/display/TRAANode.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const SITE = __SITE_JSON__;
 const PROJ = __PROJECT_JSON__;     // project.json: name, location, north, UI strings, views (see project.example.json)
@@ -813,6 +814,124 @@ function fBBQ2(f, parent) {              // outdoor kitchen after the reference 
   for (let k = 0; k < 9; k++) box(t1, W, D - 0.045, D - 0.035, y + 0.06 + k * 0.09, y + 0.065 + k * 0.09, mk('BBQ_TileJoint', 0xa98058), false);
   box(t1, W + 0.01, 0, D + 0.03, top - 0.04, top, slate);
 }
+// ---------- 1.11: wardrobe items — shoes, high heels, ankle and tall boots, bathrobes, trousers (procedural, CC0 by construction) ----------
+// Each item is built in a local frame (shoes: toe towards +z, garments: front towards +z, hanging from y = 0 downwards) and placed with
+// placeWear(group, x, y, z, yaw). Used by the closets and shoe racks, and by the furniture names shoes, high heels, boots, robe, trousers.
+const WEAR = (() => {
+  const rb = (g, w, h, d, x, y, z, m, r = 0.02, rx = 0) => {
+    const geo = new RoundedBoxGeometry(w, h, d, 2, Math.max(0.002, Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001)));
+    if (rx) geo.rotateX(rx); geo.translate(x, y, z); const o = new THREE.Mesh(geo, m); o.castShadow = o.receiveShadow = true; g.add(o); return o;
+  };
+  const cy = (g, r0, r1, h, x, y, z, m, seg = 10) => { const geo = new THREE.CylinderGeometry(r1, r0, h, seg); geo.translate(x, y + h / 2, z); const o = new THREE.Mesh(geo, m); o.castShadow = true; g.add(o); return o; };
+  const sole = clothMat(0x1a1918);
+  // one shoe, toe at +z, sole on y = 0
+  function shoe(kind, col) {
+    const g = new THREE.Group(), m = clothMat(col);
+    if (kind === 'heel') {                                                   // stiletto pump: toe pad, sloped arch, heel counter, 9 cm stiletto
+      const hh = 0.09, a = Math.atan2(hh, 0.15);
+      rb(g, 0.068, 0.012, 0.085, 0, 0.006, 0.075, sole, 0.005);
+      rb(g, 0.06, 0.008, 0.16, 0, hh / 2 + 0.006, -0.035, sole, 0.003, -a);
+      rb(g, 0.072, 0.045, 0.085, 0, 0.032, 0.075, m, 0.02);                  // vamp over the toes
+      rb(g, 0.066, 0.05, 0.035, 0, hh + 0.03, -0.105, m, 0.012);             // heel counter
+      for (const s of [-1, 1]) rb(g, 0.006, 0.03, 0.12, s * 0.032, hh / 2 + 0.03, -0.04, m, 0.002, -a);   // side walls
+      cy(g, 0.004, 0.009, hh, 0, 0, -0.112, m, 8);                           // stiletto
+    } else {
+      rb(g, 0.098, 0.022, 0.27, 0, 0.011, 0, sole, 0.01);                    // sole
+      rb(g, 0.09, 0.07, 0.24, 0, 0.055, -0.008, m, 0.03);                    // upper
+      if (kind === 'ankle') { rb(g, 0.088, 0.15, 0.11, 0, 0.13, -0.075, m, 0.03); cy(g, 0.022, 0.022, 0.035, 0, 0, -0.1, sole, 10); }
+      if (kind === 'boot') { rb(g, 0.1, 0.38, 0.12, 0, 0.25, -0.07, m, 0.035); rb(g, 0.104, 0.03, 0.125, 0, 0.43, -0.07, m, 0.012); cy(g, 0.022, 0.022, 0.035, 0, 0, -0.1, sole, 10); }
+      if (kind === 'shoe') rb(g, 0.06, 0.004, 0.06, 0, 0.091, 0.02, clothMat(0xf3f1ec), 0.002);   // laces / tongue
+    }
+    return g;
+  }
+  function pair(kind, col) {
+    const g = new THREE.Group(), w = kind === 'heel' ? 0.05 : 0.06;
+    for (const s of [-1, 1]) { const one = shoe(kind, col); one.position.x = s * w; one.rotation.y = -s * 0.06; g.add(one); }
+    return g;
+  }
+  // wire hanger, hook top at y = 0
+  function hanger(g, w = 0.42) {
+    const m = M.frame || clothMat(0x2b2d30);
+    cy(g, 0.003, 0.003, 0.06, 0, -0.06, 0, m, 6);
+    for (const s of [-1, 1]) { const geo = new THREE.CylinderGeometry(0.003, 0.003, Math.hypot(w / 2, 0.07), 6); geo.rotateZ(s * (Math.PI / 2 - Math.atan2(0.07, w / 2))); geo.translate(s * w / 4, -0.095, 0); g.add(new THREE.Mesh(geo, m)); }
+    const bar = new THREE.CylinderGeometry(0.003, 0.003, w, 6); bar.rotateZ(Math.PI / 2); bar.translate(0, -0.13, 0); g.add(new THREE.Mesh(bar, m));
+  }
+  // bathrobe hanging from a hook or a hanger: flared body, shawl collar, sleeves, tied belt
+  function robe(col, onHanger = false) {
+    const g = new THREE.Group(), m = clothMat(col), top = onHanger ? -0.13 : -0.03, L = 1.12;
+    if (onHanger) hanger(g, 0.44);
+    const sh = new THREE.Shape([new THREE.Vector2(-0.22, 0), new THREE.Vector2(0.22, 0), new THREE.Vector2(0.31, -L), new THREE.Vector2(-0.31, -L)]);
+    const body = new THREE.ExtrudeGeometry(sh, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 });
+    body.translate(0, top, -0.035); const bm = new THREE.Mesh(body, m); bm.castShadow = bm.receiveShadow = true; g.add(bm);
+    for (const s of [-1, 1]) { rb(g, 0.14, 0.58, 0.12, s * 0.27, top - 0.33, 0, m, 0.05); rb(g, 0.1, 0.36, 0.035, s * 0.07, top - 0.2, 0.07, m, 0.02); }   // sleeves, shawl collar
+    rb(g, 0.6, 0.05, 0.13, 0, top - 0.52, 0.01, m, 0.02);                    // belt
+    for (const s of [-1, 1]) rb(g, 0.045, 0.34, 0.02, s * 0.04, top - 0.72, 0.085, m, 0.01);   // belt ends
+    if (!onHanger) { const hk = M.frame || clothMat(0x2b2d30); rb(g, 0.02, 0.06, 0.05, 0, -0.02, -0.06, hk, 0.006); }
+    return g;
+  }
+  // trousers on a clip hanger: waistband, two tapered legs, crease shading
+  function trousers(col) {
+    const g = new THREE.Group(), m = clothMat(col), L = 1.0, top = -0.14;
+    hanger(g, 0.38); rb(g, 0.4, 0.05, 0.035, 0, top - 0.025, 0, m, 0.012);
+    for (const s of [-1, 1]) {
+      const sh = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(s * 0.195, 0), new THREE.Vector2(s * 0.18, -L), new THREE.Vector2(s * 0.025, -L)]);
+      const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.022, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2 });
+      geo.translate(s * 0.004, top - 0.05, -0.011); const o = new THREE.Mesh(geo, m); o.castShadow = o.receiveShadow = true; g.add(o);
+    }
+    return g;
+  }
+  // shirt / jacket / coat on a hanger: shaped body (extruded outline), sleeves, collar or lapels; L = length below the shoulders
+  function top(kind, col, L) {
+    const g = new THREE.Group(), m = clothMat(col), jk = kind !== 'shirt', t = jk ? 0.045 : 0.016, sw = jk ? 0.24 : 0.215;
+    hanger(g, jk ? 0.44 : 0.4);
+    const sh = new THREE.Shape([new THREE.Vector2(-0.06, -0.125), new THREE.Vector2(0.06, -0.125), new THREE.Vector2(sw, -0.17), new THREE.Vector2(sw - 0.01, -0.17 - L), new THREE.Vector2(-sw + 0.01, -0.17 - L), new THREE.Vector2(-sw, -0.17)]);
+    const body = new THREE.ExtrudeGeometry(sh, { depth: t, bevelEnabled: true, bevelThickness: jk ? 0.015 : 0.006, bevelSize: jk ? 0.012 : 0.006, bevelSegments: 2 });
+    body.translate(0, 0, -t / 2); const bm = new THREE.Mesh(body, m); bm.castShadow = bm.receiveShadow = true; g.add(bm);
+    const sl = Math.min(jk ? 0.62 : 0.58, L * 0.95);
+    for (const s of [-1, 1]) rb(g, jk ? 0.1 : 0.075, sl, jk ? 0.07 : 0.035, s * (sw - 0.02), -0.17 - sl / 2, 0.005, m, jk ? 0.03 : 0.012);   // sleeves
+    if (kind === 'shirt') {
+      rb(g, 0.15, 0.035, 0.045, 0, -0.135, 0.01, m, 0.012);                                         // collar
+      rb(g, 0.022, L - 0.02, 0.006, 0, -0.17 - L / 2, t / 2 + 0.008, clothMat(Math.max(0, col - 0x0a0a0a)), 0.002);   // button placket
+    } else {
+      for (const s of [-1, 1]) { const lp = rb(g, 0.075, 0.26, 0.012, s * 0.06, -0.27, t / 2 + 0.02, m, 0.004); lp.rotation.z = s * 0.32; }   // lapels
+      for (const s of [-1, 1]) rb(g, 0.11, 0.018, 0.012, s * 0.12, -0.17 - L * 0.62, t / 2 + 0.018, m, 0.004);   // pocket flaps
+      for (let b = 0; b < 2; b++) cy(g, 0.008, 0.008, 0.006, 0, -0.17 - L * (0.42 + b * 0.16), t / 2 + 0.018, clothMat(0x1a1918), 8).rotation.x = Math.PI / 2;
+    }
+    return g;
+  }
+  // jewellery tray: velvet tray with rings on cones, a watch, a necklace stand with two chains, pearl earrings (top surface at y = 0)
+  function jewellery() {
+    const g = new THREE.Group(), velvet = clothMat(0x2a2326);
+    const gold = M.Jewel_Gold || (M.Jewel_Gold = Object.assign(new THREE.MeshStandardMaterial({ color: 0xd6b25e, metalness: 1, roughness: 0.22 }), { name: 'Jewel_Gold' }));
+    const silver = M.Jewel_Silver || (M.Jewel_Silver = Object.assign(new THREE.MeshStandardMaterial({ color: 0xd9dadc, metalness: 1, roughness: 0.18 }), { name: 'Jewel_Silver' }));
+    const pearl = M.Jewel_Pearl || (M.Jewel_Pearl = Object.assign(new THREE.MeshStandardMaterial({ color: 0xf6f1e8, roughness: 0.25 }), { name: 'Jewel_Pearl' }));
+    rb(g, 0.3, 0.03, 0.18, 0, 0.015, 0, velvet, 0.008);
+    for (let i = 0; i < 3; i++) { const x = -0.11 + i * 0.045, c = new THREE.ConeGeometry(0.012, 0.05, 12); c.translate(x, 0.055, -0.04); g.add(new THREE.Mesh(c, velvet));
+      const r = new THREE.TorusGeometry(0.0105, 0.0022, 6, 18); r.rotateX(Math.PI / 2); r.translate(x, 0.05, -0.04); g.add(new THREE.Mesh(r, i === 1 ? silver : gold)); }
+    const w = new THREE.TorusGeometry(0.03, 0.006, 8, 24); w.rotateX(Math.PI / 2); w.translate(-0.06, 0.036, 0.045); g.add(new THREE.Mesh(w, silver));     // watch
+    const face = new THREE.CylinderGeometry(0.018, 0.018, 0.008, 20); face.translate(-0.06, 0.04, 0.045); g.add(new THREE.Mesh(face, clothMat(0x1c2a3a)));
+    for (const x of [0.02, 0.045]) { const p = new THREE.SphereGeometry(0.006, 10, 8); p.translate(x, 0.036, 0.05); g.add(new THREE.Mesh(p, pearl)); }   // earrings
+    rb(g, 0.012, 0.22, 0.012, 0.1, 0.14, -0.03, velvet, 0.004); rb(g, 0.13, 0.012, 0.012, 0.1, 0.25, -0.03, velvet, 0.004);   // necklace stand
+    for (const [dx, rad, mm] of [[-0.03, 0.045, gold], [0.03, 0.06, silver]]) {
+      const n_ = new THREE.TorusGeometry(rad, 0.0018, 6, 40, Math.PI); n_.rotateZ(Math.PI); n_.scale(0.55, 1.4, 1); n_.translate(0.1 + dx, 0.25, -0.022); g.add(new THREE.Mesh(n_, mm));
+      const pd = new THREE.SphereGeometry(0.007, 10, 8); pd.translate(0.1 + dx, 0.25 - rad * 1.4, -0.022); g.add(new THREE.Mesh(pd, mm)); }
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
+  return { shoe, pair, robe, trousers, top, jewellery };
+})();
+// merge a group of wardrobe items into one mesh per material (closets hold hundreds of small parts)
+function bakeWear(bag, parent) {
+  bag.updateMatrixWorld(true); const buckets = new Map();
+  bag.traverse(o => { if (!o.isMesh) return; const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(o.matrixWorld);
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    (buckets.get(o.material) || buckets.set(o.material, []).get(o.material)).push(g); });
+  for (const [m, list] of buckets) { const g = mergeGeometries(list, false); if (g) addMesh(parent, g, m, true, true); }
+}
+const SHOE_COLS = { shoe: [0x1d1c1b, 0x6b4a33, 0xf2efe8, 0x2b3442], heel: [0x8a1d2b, 0x1a1a1a, 0xd9b99b, 0xc9a24a], ankle: [0x3b2a20, 0x1e1d1c, 0x8a6a4f], boot: [0x1c1b1a, 0x5a3b28, 0x7d5f48] };
+function placeWear(parent, obj, x, y, z, yaw = 0, s = 1) { obj.position.set(x, y, z); obj.rotation.y = yaw; obj.scale.setScalar(s); parent.add(obj); return obj; }
+function frameYaw(G) { const [ax, az] = G.world(0, 0), [bx, bz] = G.world(0, 1); return Math.atan2(bx - ax, bz - az); }   // yaw turning +z towards the frame's front
 function fClosetUnit(f, parent) {          // walk-in closet unit (light oak, LED strips): style 'hang' (drawers + rail + clothes), 'shelves' (lit shelves + folded stacks), 'drawers' (low chest)
   const side = f.back || backSide(f, false), G = fframe(f, side, parent), { W, D, box } = G, y = f.y0, H = f.h;
   const wood = M.oak_top || M.wood, front = M.stone_top || M.white, st = f.style || 'shelves';
@@ -825,12 +944,13 @@ function fClosetUnit(f, parent) {          // walk-in closet unit (light oak, LE
   box(0, W, 0, D, y + H - 0.03, y + H, wood);
   const n = f.zones ? f.zones.length : Math.max(1, Math.round(W / 1.0)); for (let i = 1; i < n; i++) { const u = W * i / n; box(u - 0.01, u + 0.01, 0.02, D, y, y + H - 0.03, wood); }
   const zones = f.zones || Array(n).fill(st), mw = W / n;
-  const rail = (u0, u1, yr, len0, lenV, cols, wd) => {          // rail + hanging garments (boxes) of varied width/length
+  const bag = new THREE.Group(), across = frameYaw(G) + Math.PI / 2;
+  const rail = (u0, u1, yr, len0, lenV, cols, wd, kind = wd > 0.055 ? 'coat' : wd > 0.04 ? 'jacket' : 'shirt') => {   // rail + garments on hangers
     box(u0 + 0.02, u1 - 0.02, D * 0.5 - 0.012, D * 0.5 + 0.012, yr - 0.025, yr, M.dark);
     let u = u0 + 0.05, k = 0;
     while (u < u1 - 0.07) {
-      const w = wd + (k * 37 % 3) * 0.012, hg = len0 + (k * 53 % 4) * lenV;
-      box(u, u + w, D * 0.5 - 0.22, D * 0.5 + 0.22, yr - 0.03 - hg, yr - 0.03, clothMat(cols[k % cols.length]), false);
+      const w = wd + (k * 37 % 3) * 0.012, hg = len0 + (k * 53 % 4) * lenV, [gx, gz] = G.world(u + w / 2, D * 0.5);
+      placeWear(bag, WEAR.top(kind === 'mixed' ? ['shirt', 'jacket'][k % 2] : kind === 'coat' ? 'jacket' : kind, cols[k % cols.length], Math.max(0.3, hg - 0.17)), gx, yr - 0.025, gz, across, Math.min(1, (D - 0.06) / 0.5));
       u += w + 0.016; k++;
     }
   };
@@ -841,13 +961,19 @@ function fClosetUnit(f, parent) {          // walk-in closet unit (light oak, LE
   zones.forEach((z, i) => {
     const u0 = i * mw, u1 = (i + 1) * mw;
     if (z === 'long') {                    // big coats: one high rail, ~1.3 m drop, shoe shelf below
-      topShelf(u0, u1, y + H - 0.36); rail(u0, u1, y + H - 0.42, 1.15, 0.07, COATS, 0.06);
+      topShelf(u0, u1, y + H - 0.36); rail(u0, u1 - (u1 - u0 > 0.9 ? 0.5 : 0), y + H - 0.42, 1.15, 0.07, COATS, 0.06);
+      if (u1 - u0 > 0.9) { const [rx, rz] = G.world(u1 - 0.27, D * 0.5); placeWear(bag, WEAR.robe(0xf1eee8, true), rx, y + H - 0.42, rz, across); }   // bathrobe on a hanger, across the rail like the other garments
       box(u0 + 0.02, u1 - 0.02, 0.02, D, y + 0.18, y + 0.205, wood);
-      for (let u = u0 + 0.06; u + 0.1 < u1 - 0.04; u += 0.15) box(u, u + 0.1, 0.12, 0.40, y + 0.205, y + 0.29, clothMat(0x2a2420), false);
+      { let k = 0; for (let u = u0 + 0.13; u + 0.1 < u1 - 0.04; u += 0.26, k++) {             // shoe shelf: tall boots, heels, ankle boots
+        const kind = ['boot', 'heel', 'ankle', 'heel'][k % 4], [sx, sz] = G.world(u, D * 0.55);
+        placeWear(bag, WEAR.pair(kind, SHOE_COLS[kind][k % SHOE_COLS[kind].length]), sx, y + 0.205, sz, frameYaw(G)); } }
     } else if (z === 'double') {           // two rails: shirts above, short coats / blazers below
       topShelf(u0, u1, y + H - 0.36); rail(u0, u1, y + H - 0.42, 0.72, 0.04, SHIRTS, 0.035);
       box(u0 + 0.02, u1 - 0.02, 0.02, D, y + 1.12, y + 1.145, wood);
-      rail(u0, u1, y + 1.08, 0.62, 0.05, JACKETS, 0.05);
+      rail(u0, u0 + (u1 - u0) * 0.45, y + 1.08, 0.62, 0.05, JACKETS, 0.05);
+      box(u0 + (u1 - u0) * 0.45, u1 - 0.02, D * 0.5 - 0.012, D * 0.5 + 0.012, y + 1.055, y + 1.08, M.dark);
+      { const TR = [0x2a2f3a, 0xb7a68b, 0x1d1d1d, 0x6f7177, 0xe6dfd2], yaw = frameYaw(G) + Math.PI / 2; let k = 0;
+        for (let u = u0 + (u1 - u0) * 0.45 + 0.05; u < u1 - 0.05; u += 0.06, k++) { const [tx, tz] = G.world(u, D * 0.5); placeWear(bag, WEAR.trousers(TR[k % TR.length]), tx, y + 1.055, tz, yaw, 0.92); } }
     } else if (z === 'hang') {             // drawers + rail
       box(u0 + 0.02, u1 - 0.02, 0.02, D, y, y + 0.85, front); box(u0 + 0.02, u1 - 0.02, 0.02, D + 0.01, y + 0.85, y + 0.88, wood);
       for (const hh of [0.29, 0.57]) box(u0 + 0.03, u1 - 0.03, D - 0.004, D + 0.003, y + hh - 0.004, y + hh + 0.004, M.dark, false);
@@ -860,6 +986,7 @@ function fClosetUnit(f, parent) {          // walk-in closet unit (light oak, LE
       }
     }
   });
+  bakeWear(bag, parent);
 }
 function fHallEntry(f, parent) {        // entrance feature wall (B5): oak slat panel + round oak mirror, sconces, floating fluted console with LED, pebble planter, olive tree, pendant
   const G = fframe(f, f.back || 'e', parent), { W, box, cyl, world } = G, y = f.y0, H = f.h, oak = M.oak_top || M.wood;
@@ -1098,11 +1225,14 @@ function fShoeUnit(f, parent) {        // B5: slim divider unit (0,35 m) — ope
   for (const l of levels) box(0.025, W - 0.025, 0.03, D, y + l, y + l + 0.025, oak);
   for (let i = 0; i < levels.length - 1; i++) box(0.03, W - 0.03, D - 0.05, D - 0.04, y + levels[i + 1] - 0.012, y + levels[i + 1] - 0.004, M.led, false);
   const shoe = [0x1d1c1b, 0xc8a27a, 0xf2efe8, 0x8a2f35, 0x5a4636, 0xd8c6b0];
-  for (let i = 0; i < 4; i++) for (let u = 0.06, k = 0; u + 0.26 < W - 0.04; u += 0.30, k++) {
-    const c = clothMat(shoe[(i * 3 + k) % shoe.length]); box(u, u + 0.10, 0.06, 0.30, y + levels[i] + 0.025, y + levels[i] + 0.10, c); box(u + 0.13, u + 0.23, 0.06, 0.30, y + levels[i] + 0.025, y + levels[i] + 0.10, c); }
-  const bag = [0xe8d8c4, 0x2b2a28, 0xb5876a, 0xf4e9e2, 0x7d5a44];
+  const bag = new THREE.Group();
+  for (let i = 0; i < 4; i++) for (let u = 0.17, k = 0; u + 0.12 < W - 0.04; u += 0.30, k++) {               // pairs: trainers/loafers, stilettos, ankle boots
+    const kind = ['shoe', 'heel', 'ankle', 'heel', 'shoe'][(i + k) % 5], [sx, sz] = G.world(u, D * 0.55), s2 = Math.min(1, (D - 0.04) / 0.28);
+    placeWear(bag, WEAR.pair(kind, SHOE_COLS[kind][(i * 3 + k) % SHOE_COLS[kind].length]), sx, y + levels[i] + 0.025, sz, frameYaw(G), s2); }
+  bakeWear(bag, parent);
+  const BAGS = [0xe8d8c4, 0x2b2a28, 0xb5876a, 0xf4e9e2, 0x7d5a44];
   for (let i = 4; i < 7; i++) for (let u = 0.08, k = 0; u + 0.30 < W - 0.05; u += 0.42, k++) {
-    const c = clothMat(bag[(i + k) % bag.length]); box(u, u + 0.30, 0.08, 0.28, y + levels[i] + 0.025, y + levels[i] + 0.25, c);
+    const c = clothMat(BAGS[(i + k) % BAGS.length]); box(u, u + 0.30, 0.08, 0.28, y + levels[i] + 0.025, y + levels[i] + 0.25, c);
     box(u + 0.08, u + 0.22, 0.17, 0.19, y + levels[i] + 0.25, y + levels[i] + 0.32, c); }
   for (let i = 7; i < 9; i++) for (let u = 0.20, k = 0; u + 0.15 < W - 0.05; u += 0.40, k++) {
     const c = clothMat([0xd9c3a0, 0x3a3532, 0xefe6d6][(i + k) % 3]); cyl(u, D / 2, 0.17, y + levels[i] + 0.025, y + levels[i] + 0.035, c, 24); cyl(u, D / 2, 0.09, y + levels[i] + 0.035, y + levels[i] + 0.14, c, 20, 0.08); }
@@ -1124,6 +1254,7 @@ function fVanityMakeup(f, parent) {     // B5: make-up corner — floating oak d
   for (let k = 0; k < 6; k++) { const u = 0.10 + k * (W - 0.20) / 5; cyl(u, 0.04, 0.03, y + 2.14, y + 2.20, M.led, 12); }
   cyl(W * 0.25, D * 0.45, 0.04, y + 0.76, y + 0.86, clothMat(0xe7c3c8), 12); cyl(W * 0.33, D * 0.40, 0.03, y + 0.76, y + 0.90, M.glass, 12); box(W * 0.65, W * 0.85, 0.15, 0.30, y + 0.76, y + 0.80, clothMat(0x2b2a28));
   cyl(W / 2, D + 0.22, 0.20, y + 0.40, y + 0.46, clothMat(0xf2e6dc), 24); cyl(W / 2, D + 0.22, 0.03, y, y + 0.40, oak, 10);
+  { const [jx, jz] = G.world(W * 0.5, D * 0.42), bag = new THREE.Group(); placeWear(bag, WEAR.jewellery(), jx, y + 0.76, jz, frameYaw(G)); bakeWear(bag, parent); }   // jewellery tray
 }
 function furnModel(f, parent) {
   const n = (f.name || '').toLowerCase(), [x0, z0, x1, z1] = f.b, y = f.y0, H = f.h, m = M[f.mat] || M.white;
@@ -1159,6 +1290,34 @@ function furnModel(f, parent) {
   if (/^is principal|^main bath/.test(n)) return fMainBath(f, parent);
   if (/^ripado|^slat (screen|divider)/.test(n)) return fSlatDivider(f, parent);
   if (/^puff|^pouf/.test(n)) return fPouf(f, parent);
+  if (/^(sapatos|shoes|saltos? altos?|sapatos de salto|high heels|heels|botas|boots|botins|ankle boots)\b/.test(n)) {   // pairs on the floor, along the footprint, toes to the front
+    const G = F(f.back || backSide(f, false)), kind = /salto|heel/.test(n) ? 'heel' : /botins|ankle/.test(n) ? 'ankle' : /bota|boot/.test(n) ? 'boot' : 'shoe', cols = SHOE_COLS[kind];
+    const bag = new THREE.Group(); let k = 0;
+    for (let u = 0.12; u < G.W - 0.1; u += 0.28, k++) { const [sx, sz] = G.world(u, Math.min(0.18, G.D / 2)); placeWear(bag, WEAR.pair(kind, f.color ? parseInt(String(f.color).replace('#', ''), 16) : cols[k % cols.length]), sx, y, sz, frameYaw(G)); }
+    bakeWear(bag, parent); return;
+  }
+  if (/^(roupão|robe|bathrobe)/.test(n)) {                                    // bathrobe on a wall hook (hook at f.y0 + f.h)
+    const G = F(f.back || backSide(f, false)), [hx, hz] = G.world(G.W / 2, 0.08);
+    placeWear(parent, WEAR.robe(f.color ? parseInt(String(f.color).replace('#', ''), 16) : 0xf1eee8), hx, y + H, hz, frameYaw(G)); return;
+  }
+  if (/^(camisas?|shirts?|casacos?|jackets?|blazers?|coats?|sobretudos?)\b/.test(n)) {   // garments on hangers along a rail at f.y0 + f.h
+    const G = F(f.back || backSide(f, false)), bag = new THREE.Group(), kind = /camisa|shirt/.test(n) ? 'shirt' : 'jacket', L = /coat|sobretudo/.test(n) ? 0.95 : kind === 'shirt' ? 0.55 : 0.5;
+    const cols = kind === 'shirt' ? [0xf4f4f2, 0xc9d6e6, 0xe9e5dc, 0x9fb3c8] : [0x3c3c3c, 0x6b5a45, 0x2a3442, 0x8c8c8c], step = kind === 'shirt' ? 0.055 : 0.09;
+    G.box(0, G.W, G.D / 2 - 0.012, G.D / 2 + 0.012, y + H - 0.025, y + H, M.dark);
+    let k = 0; for (let u = 0.06; u < G.W - 0.05; u += step, k++) { const [tx, tz] = G.world(u, G.D / 2); placeWear(bag, WEAR.top(kind, cols[k % cols.length], L), tx, y + H - 0.025, tz, frameYaw(G) + Math.PI / 2); }
+    bakeWear(bag, parent); return;
+  }
+  if (/^(jóias|joias|joalharia|bijuteria|jewel?lery|jewelry)/.test(n)) {        // jewellery tray standing on the surface at f.y0
+    const G = F(f.back || backSide(f, false)), [jx, jz] = G.world(G.W / 2, G.D / 2), bag = new THREE.Group();
+    placeWear(bag, WEAR.jewellery(), jx, y, jz, frameYaw(G)); bakeWear(bag, parent); return;
+  }
+  if (/^(calças|trousers|pants)/.test(n)) {                                   // trousers on hangers along a rail at f.y0 + f.h
+    const G = F(f.back || backSide(f, false)), TR = [0x2a2f3a, 0xb7a68b, 0x1d1d1d, 0x6f7177];
+    G.box(0, G.W, G.D / 2 - 0.012, G.D / 2 + 0.012, y + H - 0.025, y + H, M.dark);
+    const bag = new THREE.Group(); let k = 0;
+    for (let u = 0.06; u < G.W - 0.05; u += 0.07, k++) { const [tx, tz] = G.world(u, G.D / 2); placeWear(bag, WEAR.trousers(TR[k % TR.length]), tx, y + H - 0.025, tz, frameYaw(G) + Math.PI / 2, 0.92); }
+    bakeWear(bag, parent); return;
+  }
   if (/forno a lenha|wood.?fired/.test(n)) return fOven(f, parent);
   if (/^carro|^car\b/.test(n)) return fCar(f, parent);
   if (/^cama|bed\b/.test(n)) return fBed(f, parent);
