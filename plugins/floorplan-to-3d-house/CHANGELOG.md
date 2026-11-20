@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.9.0 (2026-11-20)
+More realistic 3D page, same functions (orbit, walk, drone, views, layers, sun, night, storeys, labels).
+- **WebGPU renderer (three.js r187)** with an automatic WebGL 2 fallback. New **Image quality** control:
+  - **High**: screen-space global illumination + ambient occlusion (SSGI) with temporal anti-aliasing (TRAA);
+  - **Medium**: GTAO ambient occlusion + TRAA;
+  - **Light**: plain forward rendering + MSAA (the 1.8 look).
+  - **Auto** (default) picks High on computers with WebGPU, Medium on phones, Light on phones without WebGPU, and drops one level when a loaded scene stays under 24 fps (stalls such as a hidden tab or shader compilation don't count). The choice is remembered per viewer.
+  - A notice tells the viewer to wait while a level compiles its shaders.
+- **Ground shader in TSL** (node material), same masks and look. Sky drawn by the renderer (day and night gradients); the environment dims gradually at dusk instead of switching off.
+- **Default time 15:30** (`project.json` `"sun_hour"` to change it): low sun on the façades, long shadows.
+- **Hide the whole menu**: `‹` slides the panel off to the left, a `☰` button brings it back (remembered per viewer).
+- **Start-up diagnostics**: an error during start-up shows on the loading screen, and renderer errors show in a small box, instead of a silent hang.
+- **Soft upholstery**: sofas, beds (mattress, duvet, pillows, folded throw) built from rounded boxes.
+- **Olive trees**: twisted twin trunk with bark texture, branches and a silver-green crown of instanced leaf cards over an inner foliage mass (procedural, CC0 by construction). Exported to the GLB with every leaf card in place.
+- **Cars**: generic modern hatchback (no brand): rounded profile, tapering glasshouse, headlamps and light bars, black wheel arches and sills, alloy wheels.
+- **CC0 furniture models** (Poly Haven, `scripts/web/models/`, ~2.6 MB): globe pendants over the island and the dining table, coffee tables, plants, jug, wicker basket, cushions on beds. Publish `site3d/models/` with the page. Classic Poly Haven sofas and chairs are deliberately not used.
+- **`layout.garage_access`** (optional): concrete access ramp with kerbs from the road to the garage floor, and steps inside the garage from a door at a higher level. See `references/layout-schema.md`.
+- **Fix:** textures cloned before their photo had loaded crashed the WebGPU renderer; materials now load their own copy.
+- **Bundled three.js r187** in `scripts/web/three/` (`build/` + `jsm/`, every file under 1 MiB) replaces r160; `export.js`, `navtest.js` and `shot2.js` serve it, the textures and the models through the new `scripts/cloud/local_assets.js`. Renders and the GLB use the Light level in the headless browser.
+
 ## 1.8.4 (2026-11-12)
 - **Fix: renders on the GPU.** A background Blender reads the user's preferences; with the compute device at "None", Cycles fell back to the CPU without a warning. `pipeline.py` now switches on OptiX (else CUDA / HIP / Metal / oneAPI) in the render and test processes, without saving the preferences: about 4–5× faster on an RTX 4060. New `"start_frame"` resumes a stopped render.
 - **Fix: sun position in the video.** The sky texture's sun was mirrored against the Sun lamp (`sun_rotation` is measured from +Y toward +X), so the sky glow and the sun disc did not match the shadows.

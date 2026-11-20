@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, opens the model in Blender, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.8.4"
+  version: "1.9.0"
 ---
 
 # Floor plan → 2D plan (approval) → 3D model → Blender → video
@@ -33,7 +33,7 @@ Every change, at any point, goes back to a new 2D plan `v<n+1>` and its stop. Ne
 
 ## Files
 Paths are relative to this skill's base directory. `validate-plan` and `drone-video` reuse these scripts.
-- `scripts/setup_workspace.sh`: workspace setup (copies the textures, checks dependencies; downloads nothing). `scripts/web/three/`: bundled three.js r160 for the local tests.
+- `scripts/setup_workspace.sh`: workspace setup (copies the textures, checks dependencies; downloads nothing). `scripts/web/three/`: bundled three.js r187 (WebGPU build + addons) for the local tests; `scripts/web/models/`: CC0 furniture models the page loads from `models/`.
 - `scripts/cloud/`: `pdf2dxf.py`, `extract3d.py`, `masks.py`, `masks2.py` (inputs); `validate_layout.py`, `plan2d.py`, `plan2d_simple.py`, `storey_filter.py` (plan + QA); `build_page.py`, `export.js`, `tris2dxf.py`, `elevations.py`, `sun_report.py`, `style_from_colors.py` (3D + exports); `camera_path.py`, `camera_script.py` (video paths); `fonts.py` (font lookup shared by the PNG sheets); `pack_work.py`; `shot2.js`, `navtest.js` (debugging); `gaps.py`, `tex.py`.
 - `scripts/web/`: the 3D page engine. `scripts/blender/`: `pipeline.py` (build / test / final in one call), `run_all.py` + passes, `doors.py`, `open_in_blender.py`, `encode.py`.
 - `styles/`: presets. `examples/`: a complete one-storey and a two-storey project.
@@ -54,7 +54,7 @@ Send the PNG (and DXF once approved). Tell the user they can point at places by 
 One AskUserQuestion: **"Continue to 3D?"** — "Yes" / "Change the plan (describe; grid cells welcome)" / "Stop here". Ask about the video only later, and only if the user wants one (Step 8). On a change: update the layout, `v<n+1>`, PNG, ask again.
 
 ## Steps 6–7. 3D page, exports
-Masks, `build_page.py`, publish the page with the Artifact tool (same link on republish). Then one `export.js … all` session (GLB + 5 renders, which double as the visual check), `tris2dxf.py`, and for the approved version the elevations and sun report. Zip: GLB, 3D DXF, plan DXF + PNG, renders, elevations, sun report, QA, `PROMPT.txt` (English + user's language), `README.txt` (units, axes, measured vs proposed, credits). Pack `work_v<n>.zip`. Details: `references/exports.md`.
+Masks, `build_page.py`, publish the page with the Artifact tool together with `site3d/tex/` and `site3d/models/` (same link on republish). Then one `export.js … all` session (GLB + 5 renders, which double as the visual check), `tris2dxf.py`, and for the approved version the elevations and sun report. Zip: GLB, 3D DXF, plan DXF + PNG, renders, elevations, sun report, QA, `PROMPT.txt` (English + user's language), `README.txt` (units, axes, measured vs proposed, credits). Pack `work_v<n>.zip`. Details: `references/exports.md`.
 
 ## Step 7b. Open in Blender (stop, once per session)
 Ask: **"Open the 3D model in Blender on your computer?"** — "Yes (Recommended)" / "I don't have Blender" / "Not now". If computer use is available, check the install first (`computer_resolve_access(["Blender"])`) and say what was found; still ask. "I don't have Blender" skips this and the video (the GLB opens in any glTF viewer; Blender is free). After "Yes", open later versions without asking.

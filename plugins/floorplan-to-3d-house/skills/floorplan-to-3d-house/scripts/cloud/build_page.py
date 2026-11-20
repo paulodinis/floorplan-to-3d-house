@@ -4,7 +4,7 @@ Usage (from the project work dir, which holds site3d/):
     python3 build_page.py project.json            -> site3d/page.html (local tests) + site3d/publish.html (publish this)
     python3 build_page.py project.json --export   -> site3d/export.html (UI hidden, GLB/renders exporter included)
 
-The page loads textures from tex/ next to it (publish the files in site3d/tex/ with it).
+The page loads textures from tex/ and furniture models from models/ next to it (publish site3d/tex/ and site3d/models/ with it).
 """
 import html, json, os, sys
 
@@ -76,7 +76,7 @@ eng = (eng.replace('__SITE_JSON__', json.dumps(site, separators=(',', ':')))
 extra = open(os.path.join(WEB, 'export_glb.js'), encoding='utf-8').read() if export else ''
 frag = t + '<script type="module">\n' + eng + '\n' + extra + '\n</script>\n'
 i = frag.index('</style>') + len('</style>')
-hide = '<style>#panel,#hint,.compass,#nav-help,#crosshair,#joy,#drone-up,#drone-down,#toggle-panel{display:none!important}</style>' if export else ''
+hide = '<style>#panel,#hint,.compass,#nav-help,#crosshair,#joy,#drone-up,#drone-down,#toggle-panel,#busy,#diag,#panel-show{display:none!important}</style>' if export else ''
 doc = ('<!DOCTYPE html>\n<html lang="%s">\n<head>\n<meta charset="utf-8">\n'
        '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' % esc(lang)
        + frag[:i] + '\n<style>body{margin:0}</style>\n' + hide + '\n</head>\n<body>' + frag[i:] + '\n</body>\n</html>\n')

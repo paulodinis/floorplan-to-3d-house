@@ -53,25 +53,39 @@ window.__buildExport = function () {
       m = new THREE.MeshStandardMaterial({ color: mt.color.clone(), roughness: mt.roughness, metalness: mt.metalness, side: mt.side, emissive: mt.emissive ? mt.emissive.clone() : undefined });
       if (mt.map) m.map = flatTex(mt.map);
       if (mt.normalMap) { m.normalMap = flatTex(mt.normalMap); m.normalScale = mt.normalScale.clone(); }
+      if (mt.alphaTest) { m.alphaTest = mt.alphaTest; m.transparent = false; }                   // olive leaf cards (alpha mask)
     }
     m.name = mt.name || 'Misc'; cache.set(mt, m); return m;
   };
   const addFrom = (root, name) => {
     const gg = new THREE.Group(); gg.name = name; root.updateMatrixWorld(true);
     root.traverse(o => {
-      if (!o.isMesh) return;
+      if (!o.isMesh || o.visible === false) return;                                            // skip procedural pieces replaced by a model
       const mats = Array.isArray(o.material) ? o.material : [o.material];
       const src = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
       const groups = src.groups.length ? src.groups : [{ start: 0, count: src.attributes.position.count, materialIndex: 0 }];
+      // an InstancedMesh (olive leaf cards) is baked into one mesh: every instance transformed into place
+      const mtx = [];
+      if (o.isInstancedMesh) { const mi = new THREE.Matrix4(); for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, mi); mtx.push(o.matrixWorld.clone().multiply(mi)); } }
+      else mtx.push(o.matrixWorld);
       for (const gr of groups) {
-        const mt = mats[gr.materialIndex] || mats[0];
-        const g = new THREE.BufferGeometry();
-        for (const key of ['position', 'normal', 'uv']) {
-          const at = src.attributes[key]; if (!at) continue;
-          g.setAttribute(key, new THREE.BufferAttribute(at.array.slice(gr.start * at.itemSize, (gr.start + gr.count) * at.itemSize), at.itemSize));
+        const mt = mats[gr.materialIndex] || mats[0], parts = {};
+        for (const m4 of mtx) {
+          const g = new THREE.BufferGeometry();
+          for (const key of ['position', 'normal', 'uv']) {
+            const at = src.attributes[key]; if (!at) continue;
+            g.setAttribute(key, new THREE.BufferAttribute(at.array.slice(gr.start * at.itemSize, (gr.start + gr.count) * at.itemSize), at.itemSize));
+          }
+          if (mt.map && g.attributes.uv) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * mt.map.repeat.x, uv.getY(i) * mt.map.repeat.y); }
+          g.applyMatrix4(m4);
+          for (const key in g.attributes) (parts[key] ||= []).push(g.attributes[key]);
         }
-        if (mt.map && g.attributes.uv) { const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * mt.map.repeat.x, uv.getY(i) * mt.map.repeat.y); }
-        g.applyMatrix4(o.matrixWorld);
+        const g = new THREE.BufferGeometry();
+        for (const key in parts) {
+          const list = parts[key], n = list.reduce((a, at) => a + at.array.length, 0), arr = new Float32Array(n); let off = 0;
+          for (const at of list) { arr.set(at.array, off); off += at.array.length; }
+          g.setAttribute(key, new THREE.BufferAttribute(arr, list[0].itemSize));
+        }
         const mesh = new THREE.Mesh(g, exportMat(mt)); mesh.name = mt.name || 'Mesh'; gg.add(mesh);
       }
     });
@@ -105,4 +119,6 @@ window.__exportTris = function () {
 };
 window.__view = k => { const pr = presets[k](); camera.position.copy(pr.pos); controls.target.copy(pr.tgt); controls.update(); if (k === 'interior') setRoof(false); else setRoof(true); };
 window.__stop = () => renderer.setAnimationLoop(null);
-window.__renderOnce = () => { controls.update(); renderer.render(scene, camera); };
+window.__renderOnce = (frames = 1) => { controls.update(); for (let i = 0; i < frames; i++) { if (window.__quality?.Q.pipe) window.__quality.Q.pipe.render(); else renderer.render(scene, camera); } };
+// renders and GLB run in a headless browser (software WebGL 2): plain forward rendering, like the published page's "Light" level
+if (window.__quality) window.__quality.buildPipe(window.__EXPORT_QUALITY || 'leve');

@@ -50,7 +50,7 @@
   "aria_up": "Up",
   "aria_down": "Down",
   "hint": "Drag to orbit · right button to pan · wheel to zoom · try Walk or Drone",
-  "credits": "Textures: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; sky: Poly Haven “Quarry 01” (CC0). Stone, timber slats, roof tiles and paving are procedural.",
+  "credits": "Textures: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; sky: Poly Haven “Quarry 01” (CC0). Stone, timber slats, roof tiles and paving are procedural. 3D models: Poly Haven (CC0): modern_coffee_table_01, throw_pillows_01 (recoloured), potted_plant_04, modern_ceiling_lamp_01, wicker_basket_01, jug_01. Olive trees and cars are generated.",
   "m2": "m²",
   "decimal": ".",
   "l_storey": "Storey",
@@ -60,7 +60,20 @@
    "First floor",
    "Second floor"
   ],
-  "l_areas": "Room names and areas"
+  "l_areas": "Room names and areas",
+  "q_label": "Image quality",
+  "q_auto": "Auto",
+  "q_high": "High",
+  "q_medium": "Medium",
+  "q_light": "Light",
+  "menu_hide": "Hide the menu (see the whole scene)",
+  "menu_show": "Show the menu",
+  "busy_init": "Preparing the image ({q} quality)…",
+  "busy_switch": "Preparing {q} quality… this can take a few seconds and the image pauses meanwhile.",
+  "busy_slow": "Slow image on this device ({fps} fps): switching to {q} quality…",
+  "err_prefix": "Error",
+  "err_resource": "resource did not load",
+  "err_slow": "still loading after 25 s"
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -113,7 +126,7 @@
   "aria_up": "Subir",
   "aria_down": "Descer",
   "hint": "Arrastar para rodar · botão direito para deslocar · roda para zoom · experimente Passeio ou Drone",
-  "credits": "Texturas: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; céu: Poly Haven “Quarry 01” (CC0). Pedra, ripado, telha e pavimentos são gerados.",
+  "credits": "Texturas: Poly Haven (CC0) — leafy_grass, gravel_floor, oak_wood_planks, cobblestone_floor_04, forest_ground_04; céu: Poly Haven “Quarry 01” (CC0). Pedra, ripado, telha e pavimentos são gerados. Modelos 3D: Poly Haven (CC0): modern_coffee_table_01, throw_pillows_01 (recolorido), potted_plant_04, modern_ceiling_lamp_01, wicker_basket_01, jug_01. Oliveiras e carros gerados por código.",
   "m2": "m²",
   "decimal": ",",
   "l_storey": "Piso",
@@ -123,6 +136,19 @@
    "1.º andar",
    "2.º andar"
   ],
-  "l_areas": "Nomes e áreas das divisões"
+  "l_areas": "Nomes e áreas das divisões",
+  "q_label": "Qualidade de imagem",
+  "q_auto": "Auto",
+  "q_high": "Alta",
+  "q_medium": "Média",
+  "q_light": "Leve",
+  "menu_hide": "Esconder o menu (ver a cena inteira)",
+  "menu_show": "Mostrar o menu",
+  "busy_init": "A preparar a imagem (qualidade {q})…",
+  "busy_switch": "A preparar a qualidade {q}… pode demorar alguns segundos e a imagem fica parada entretanto.",
+  "busy_slow": "Imagem lenta neste aparelho ({fps} fps): a passar para a qualidade {q}…",
+  "err_prefix": "Erro",
+  "err_resource": "recurso não carregou",
+  "err_slow": "ainda a carregar após 25 s"
  }
 }
