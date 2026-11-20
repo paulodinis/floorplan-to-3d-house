@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.10.1 (2026-11-20)
+- Lighter wicker basket model (22k → 4.9k triangles, 256 px texture): about 0.6 MB less in the plugin and on every published page.
+
 ## 1.10.0 (2026-11-20)
 - **Room dimensions with the areas**: when *Room names and areas* is on, each room also shows its inside dimensions as plan-style lines from wall to wall (width and depth), with end ticks and the length in metres (project decimal separator). The lines run near one side of the room, 2.3 m above its floor, so they read from above like the room labels. Each label slides along its line to a free spot and hides when it would cover a room label or sits behind a wall. Rooms of any shape are measured on their polygon; stairs and spans under 0.6 m are skipped. Not exported to the GLB.
 
