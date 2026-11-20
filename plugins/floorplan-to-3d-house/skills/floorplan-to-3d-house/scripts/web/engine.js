@@ -482,6 +482,9 @@ const M = {
   hedge: mat('Hedge', { roughness: 1 }, hedgeTex),
   // furniture
   fabric: mat('Furn_Fabric_Linen', { color: 0xe7e1d5, roughness: 0.95 }), wood: mat('Furn_Wood_Oak', { roughness: 0.6 }, oakTex),
+  oak_dark: mat('Furn_Wood_Dark', { color: 0x5b3e2a, roughness: 0.45 }, oakTex),   // dark wood table tops
+  oak_top: mat('Furn_Oak_Top', { color: 0xf3dcb4, roughness: 0.45 }, oakTex),   // light natural oak for table and desk tops
+  granite: mat('Furn_Granite_Black', { color: 0x141516, roughness: 0.18, metalness: 0.05 }),
   wardrobe: mat('Furn_Wardrobe', { color: 0xd8cbb8, roughness: 0.6 }), white: mat('Furn_White', { color: 0xf5f4f0, roughness: 0.4 }),
   kitchen: mat('Furn_Kitchen', { color: 0x3a3836, roughness: 0.5 }), stone_top: mat('Furn_Stone_Top', { color: 0xe4e0d8, roughness: 0.3 }),
   dark: mat('Furn_Dark', { color: 0x2f2d2b, roughness: 0.5 }), rug: mat('Furn_Rug', { color: 0xcdbfa8, roughness: 1 }),
@@ -758,6 +761,370 @@ function fOven(f, parent) {                                  // wood-fired oven:
   F.box(W / 2 - 0.25, W / 2 + 0.25, D * 0.45 + r * 0.8, D + 0.08, by + 0.08, by + 0.12, M.stone_top);   // landing slab
   F.cyl(W / 2, D * 0.45 + r * 0.55, 0.07, by + 0.08 + r * 0.6, by + 0.08 + r * 0.85 + 0.55, M.dark, 12);   // flue
 }
+// ---------- 1.10: detailed rooms and pieces (closets, laundry, pantry, bathrooms, office, hall, BBQ, pouf) ----------
+const _clothM = {};
+function clothMat(hex) { if (!_clothM[hex]) { _clothM[hex] = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.95 }); _clothM[hex].name = 'Furn_Cloth_' + hex.toString(16); } return _clothM[hex]; }
+function fBBQ(f, parent) {                                   // masonry barbecue: stone base with granite top, firebox, hood and chimney through the roof
+  const side = f.back || backSide(f, false), F = fframe(f, side, parent), { W, D, box } = F, y = f.y0, by = y + 0.85;
+  box(0, W, 0, D, y, by, M.stone);
+  box(-0.03, W + 0.03, -0.03, D + 0.03, by, by + 0.05, M.granite || M.stone_top);
+  box(W * 0.25, W * 0.29, 0, D, by + 0.05, by + 0.62, M.stone); box(W * 0.71, W * 0.75, 0, D, by + 0.05, by + 0.62, M.stone);
+  box(W * 0.29, W * 0.71, 0, 0.08, by + 0.05, by + 0.62, M.stone);
+  box(W * 0.29, W * 0.71, 0.08, D - 0.02, by + 0.05, by + 0.08, M.dark);                     // ember bed
+  box(W * 0.30, W * 0.70, 0.12, D - 0.06, by + 0.2, by + 0.215, M.dark);                    // grill
+  box(W * 0.2, W * 0.8, 0, D * 0.95, by + 0.62, by + 1.05, M.render);                        // hood
+  box(W * 0.37, W * 0.63, 0.04, 0.42, by + 1.05, y + (f.chimney || 5.0), M.render);          // chimney
+  box(W * 0.34, W * 0.66, 0.01, 0.45, y + (f.chimney || 5.0), y + (f.chimney || 5.0) + 0.06, M.stone_top);
+}
+function fBBQ2(f, parent) {              // outdoor kitchen after the reference photo (B5): clay-tile base, dark top, sink, louvred doors, wall lights, taupe BBQ tower with firewood and chimney
+  const G = fframe(f, 'n', parent), { W, D, box, cyl, world } = G, y = f.y0, top = y + 0.90;
+  const mk = (n, c, o = {}) => M[n] || (M[n] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.8 }, o)), { name: n }));
+  const clay = mk('BBQ_ClayTile', 0xc79a6a), taupe = mk('BBQ_Render_Taupe', 0xb7a794, { roughness: 0.95 }), slate = mk('BBQ_Top_Dark', 0x2e2d2c, { roughness: 0.35 }),
+        brick = mk('BBQ_Firebrick', 0x6b3a26), fire = mk('BBQ_Fire', 0xff7a1a, { emissive: 0xff5a00, emissiveIntensity: 2.5 }), logm = mk('BBQ_Logs', 0x9a6a3c), blk = mk('BBQ_Black', 0x1d1c1b, { roughness: 0.45, metalness: 0.4 });
+  const t0 = 1.40, t1 = 2.40;                                       // tower between u 1.40 and 2.40
+  // sink run (u 0 → 1.40): clay base with louvred doors, dark worktop, sink + black tap, LED shelf, two wall lights
+  box(0, t0, 0, D - 0.04, y, top - 0.04, clay);
+  for (let k = 0; k < 9; k++) box(0, t0, D - 0.045, D - 0.035, y + 0.06 + k * 0.09, y + 0.065 + k * 0.09, mk('BBQ_TileJoint', 0xa98058), false);
+  box(0.35, 1.05, D - 0.05, D + 0.005, y + 0.05, top - 0.12, blk);
+  for (let k = 0; k < 12; k++) box(0.37, 1.03, D, D + 0.012, y + 0.09 + k * 0.055, y + 0.105 + k * 0.055, slate, false);
+  box(0.699, 0.701, D + 0.005, D + 0.013, y + 0.05, top - 0.12, clay, false);
+  box(-0.01, t0, 0, D + 0.03, top - 0.04, top, slate);
+  box(0.55, 0.95, 0.15, 0.50, top - 0.035, top + 0.002, blk, false);
+  cyl(0.75, 0.08, 0.014, top, top + 0.36, blk, 10); box(0.735, 0.765, 0.08, 0.26, top + 0.33, top + 0.36, blk);
+  box(0, t0, 0, 0.18, y + 1.30, y + 1.34, slate); box(0.04, t0 - 0.04, 0.12, 0.16, y + 1.29, y + 1.30, M.led, false);
+  { const sp = new THREE.SphereGeometry(0.09, 10, 8), [px, pz] = world(1.15, 0.20); sp.translate(px, top + 0.14, pz); addMesh(parent, sp, clothMat(0x5f7044), false, false); cyl(1.15, 0.20, 0.07, top, top + 0.10, blk, 12); }
+  for (const u of [0.18, 1.22]) { box(u - 0.05, u + 0.05, D - 0.04, D + 0.06, y + 0.52, y + 0.68, blk); box(u - 0.035, u + 0.035, D + 0.06, D + 0.065, y + 0.50, y + 0.54, M.led, false); }
+  // tower: taupe render, firewood store, firebox with firebrick + flames + grill, sloped hood, chimney with black louvred cap
+  const P = 0.12, ob = D - 0.45, fr = D + 0.05;                     // hollow tower: pillars, back wall, base / shelf / lintel slabs
+  box(t0, t0 + P, 0, fr, y, y + 1.55, taupe); box(t1 - P, t1, 0, fr, y, y + 1.55, taupe); box(t0 + P, t1 - P, 0, ob, y, y + 1.55, taupe);
+  box(t0 + P, t1 - P, ob, fr, y, y + 0.12, taupe); box(t0 + P, t1 - P, ob, fr, y + 0.72, y + 0.88, taupe); box(t0 + P, t1 - P, ob, fr, y + 1.45, y + 1.55, taupe);
+  box(t0 + P, t1 - P, ob - 0.01, ob, y + 0.12, y + 0.72, mk('BBQ_Store', 0x3a2a1e), false);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) { const [lx, lz] = world(t0 + 0.18 + c * 0.11, D - 0.20), g = new THREE.CylinderGeometry(0.05, 0.05, 0.38, 8); g.rotateX(Math.PI / 2); g.translate(lx, y + 0.17 + r * 0.10, lz); addMesh(parent, g, logm, false, false); }
+  box(t0 + P, t1 - P, ob - 0.01, ob, y + 0.88, y + 1.45, brick, false); box(t0 + P, t1 - P, ob, fr, y + 0.88, y + 0.89, brick, false); box(t0 + P - 0.005, t0 + P, ob, fr, y + 0.88, y + 1.45, brick, false); box(t1 - P, t1 - P + 0.005, ob, fr, y + 0.88, y + 1.45, brick, false);
+  box(t0 + 0.25, t1 - 0.25, D - 0.35, D - 0.15, y + 0.90, y + 1.05, fire, false);
+  for (let k = 0; k < 9; k++) box(t0 + 0.14, t1 - 0.14, D - 0.40 + k * 0.045, D - 0.392 + k * 0.045, y + 1.08, y + 1.09, blk, false);
+  box(t0 + 0.12, t1 - 0.12, D + 0.02, D + 0.05, y + 1.08, y + 1.10, blk, false);
+  for (let k = 0; k < 5; k++) { const a = k / 5; box(t0 + 0.02 * k * 2.2, t1 - 0.02 * k * 2.2, 0, D + 0.05 - a * 0.30, y + 1.55 + k * 0.10, y + 1.65 + k * 0.10, taupe); }
+  const ch = y + (f.chimney || 5.0);
+  box(t0 + 0.22, t1 - 0.22, 0, D - 0.30, y + 2.05, ch, taupe);
+  for (let k = 0; k < 4; k++) box(t0 + 0.18, t1 - 0.18, -0.04, D - 0.26, ch + k * 0.07, ch + k * 0.07 + 0.035, blk);
+  // side worktop (u 2.40 → W)
+  box(t1, W, 0, D - 0.04, y, top - 0.04, clay);
+  for (let k = 0; k < 9; k++) box(t1, W, D - 0.045, D - 0.035, y + 0.06 + k * 0.09, y + 0.065 + k * 0.09, mk('BBQ_TileJoint', 0xa98058), false);
+  box(t1, W + 0.01, 0, D + 0.03, top - 0.04, top, slate);
+}
+function fClosetUnit(f, parent) {          // walk-in closet unit (light oak, LED strips): style 'hang' (drawers + rail + clothes), 'shelves' (lit shelves + folded stacks), 'drawers' (low chest)
+  const side = f.back || backSide(f, false), G = fframe(f, side, parent), { W, D, box } = G, y = f.y0, H = f.h;
+  const wood = M.oak_top || M.wood, front = M.stone_top || M.white, st = f.style || 'shelves';
+  if (st === 'drawers') {
+    box(0, W, 0, D, y, y + H, front); box(-0.01, W + 0.01, 0, D + 0.01, y + H, y + H + 0.03, wood);
+    for (let k = 1; k < 3; k++) box(0.02, W - 0.02, D - 0.004, D + 0.003, y + H * k / 3 - 0.004, y + H * k / 3 + 0.004, M.dark, false);
+    return;
+  }
+  box(0, W, 0, 0.02, y, y + H, wood); box(0, 0.02, 0, D, y, y + H, wood); box(W - 0.02, W, 0, D, y, y + H, wood);
+  box(0, W, 0, D, y + H - 0.03, y + H, wood);
+  const n = f.zones ? f.zones.length : Math.max(1, Math.round(W / 1.0)); for (let i = 1; i < n; i++) { const u = W * i / n; box(u - 0.01, u + 0.01, 0.02, D, y, y + H - 0.03, wood); }
+  const zones = f.zones || Array(n).fill(st), mw = W / n;
+  const rail = (u0, u1, yr, len0, lenV, cols, wd) => {          // rail + hanging garments (boxes) of varied width/length
+    box(u0 + 0.02, u1 - 0.02, D * 0.5 - 0.012, D * 0.5 + 0.012, yr - 0.025, yr, M.dark);
+    let u = u0 + 0.05, k = 0;
+    while (u < u1 - 0.07) {
+      const w = wd + (k * 37 % 3) * 0.012, hg = len0 + (k * 53 % 4) * lenV;
+      box(u, u + w, D * 0.5 - 0.22, D * 0.5 + 0.22, yr - 0.03 - hg, yr - 0.03, clothMat(cols[k % cols.length]), false);
+      u += w + 0.016; k++;
+    }
+  };
+  const topShelf = (u0, u1, ys) => { box(u0 + 0.02, u1 - 0.02, 0.02, D, ys, ys + 0.025, wood); box(u0 + 0.03, u1 - 0.03, D - 0.07, D - 0.04, ys - 0.012, ys - 0.002, M.led, false); };
+  const COATS = [0x2b2f38, 0xa8875f, 0x1e1e1e, 0x5d5348, 0x7a7f86, 0x3d4a5c];   // long coats: navy, camel, black, brown, grey
+  const SHIRTS = [0xf4f4f2, 0xc9d6e6, 0xe9e5dc, 0x9fb3c8, 0xffffff, 0xd8cfc0];  // shirts: white, light blue, ecru
+  const JACKETS = [0x3c3c3c, 0x6b5a45, 0x2a3442, 0x8c8c8c, 0x4f5b3f];          // short jackets / blazers
+  zones.forEach((z, i) => {
+    const u0 = i * mw, u1 = (i + 1) * mw;
+    if (z === 'long') {                    // big coats: one high rail, ~1.3 m drop, shoe shelf below
+      topShelf(u0, u1, y + H - 0.36); rail(u0, u1, y + H - 0.42, 1.15, 0.07, COATS, 0.06);
+      box(u0 + 0.02, u1 - 0.02, 0.02, D, y + 0.18, y + 0.205, wood);
+      for (let u = u0 + 0.06; u + 0.1 < u1 - 0.04; u += 0.15) box(u, u + 0.1, 0.12, 0.40, y + 0.205, y + 0.29, clothMat(0x2a2420), false);
+    } else if (z === 'double') {           // two rails: shirts above, short coats / blazers below
+      topShelf(u0, u1, y + H - 0.36); rail(u0, u1, y + H - 0.42, 0.72, 0.04, SHIRTS, 0.035);
+      box(u0 + 0.02, u1 - 0.02, 0.02, D, y + 1.12, y + 1.145, wood);
+      rail(u0, u1, y + 1.08, 0.62, 0.05, JACKETS, 0.05);
+    } else if (z === 'hang') {             // drawers + rail
+      box(u0 + 0.02, u1 - 0.02, 0.02, D, y, y + 0.85, front); box(u0 + 0.02, u1 - 0.02, 0.02, D + 0.01, y + 0.85, y + 0.88, wood);
+      for (const hh of [0.29, 0.57]) box(u0 + 0.03, u1 - 0.03, D - 0.004, D + 0.003, y + hh - 0.004, y + hh + 0.004, M.dark, false);
+      topShelf(u0, u1, y + H - 0.40); rail(u0, u1, y + H - 0.45, 0.62, 0.07, [0x3c3c3c, 0xe9e5dc, 0x8c8c8c, 0x1e1e1e, 0xc9b79c], 0.035);
+    } else {                               // lit shelves with folded stacks
+      const cols = [0xe9e5dc, 0x2a2a2a, 0xb8aa96, 0x8c8c8c, 0xf4f4f2]; let k = 0;
+      for (let s2 = 0.36; s2 < H - 0.12; s2 += 0.36) {
+        topShelf(u0, u1, y + s2);
+        for (let u = u0 + 0.08; u + 0.3 < u1 - 0.04; u += 0.38, k++) { const hh = 0.08 + (k % 3) * 0.05; box(u, u + 0.3, 0.08, D - 0.08, y + s2 + 0.025, y + s2 + 0.025 + hh, clothMat(cols[k % cols.length]), false); }
+      }
+    }
+  });
+}
+function fHallEntry(f, parent) {        // entrance feature wall (B5): oak slat panel + round oak mirror, sconces, floating fluted console with LED, pebble planter, olive tree, pendant
+  const G = fframe(f, f.back || 'e', parent), { W, box, cyl, world } = G, y = f.y0, H = f.h, oak = M.oak_top || M.wood;
+  const sph = (u, v, yy, r, m) => { const [x, z] = world(u, v), g = new THREE.SphereGeometry(r, 10, 8); g.translate(x, yy, z); addMesh(parent, g, m, true, false); };
+  const leaf = clothMat(0x6d7a45), leaf2 = clothMat(0x8a9a5b), pc = W / 2;
+  box(pc - 0.55, pc + 0.55, 0, 0.012, y, y + H, oak);                                   // slat panel
+  for (let u = pc - 0.53; u < pc + 0.53; u += 0.05) box(u, u + 0.028, 0.012, 0.04, y, y + H - 0.01, oak);
+  const mc = y + 1.62, r = 0.45, [mx, mz] = world(pc, 0.055);                           // round mirror with oak frame
+  if (!M.mirror) { M.mirror = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, metalness: 1.0, roughness: 0.04 }); M.mirror.name = 'Mirror'; }
+  const ax = f.back === 'n' || f.back === 's';
+  let g = new THREE.CylinderGeometry(r, r, 0.02, 48); if (ax) g.rotateX(Math.PI / 2); else g.rotateZ(Math.PI / 2); g.translate(mx, mc, mz); addMesh(parent, g, M.mirror, false, false);
+  g = new THREE.TorusGeometry(r, 0.022, 10, 56); if (!ax) g.rotateY(Math.PI / 2); g.translate(mx, mc, mz); addMesh(parent, g, oak, false, false);
+  for (const su of [pc - 0.68, pc + 0.68]) { box(su - 0.025, su + 0.025, 0.04, 0.09, y + 1.30, y + 1.78, M.led, false); box(su - 0.03, su + 0.03, 0.04, 0.10, y + 1.27, y + 1.30, oak); box(su - 0.03, su + 0.03, 0.04, 0.10, y + 1.78, y + 1.81, oak); }
+  const c0 = pc - 1.05, c1 = pc + 1.05;                                                 // floating console, fluted front, LED underneath
+  box(c0, c1, 0.04, 0.40, y + 0.62, y + 0.86, oak);
+  for (let u = c0 + 0.02; u < c1 - 0.02; u += 0.035) box(u, u + 0.012, 0.40, 0.408, y + 0.635, y + 0.845, M.wood, false);
+  box(c0 + 0.03, c1 - 0.03, 0.30, 0.34, y + 0.61, y + 0.62, M.led, false);
+  cyl(c0 + 0.30, 0.22, 0.09, y + 0.86, y + 1.16, M.white, 20, 0.05);                  // vase + branches
+  for (let k = 0; k < 7; k++) sph(c0 + 0.30 + Math.sin(k * 2.1) * 0.14, 0.22 + Math.cos(k * 1.7) * 0.08, y + 1.22 + (k % 3) * 0.1, 0.07, k % 2 ? leaf : leaf2);
+  cyl(c0 + 0.62, 0.22, 0.10, y + 0.86, y + 0.91, oak, 20);                             // bowl
+  box(c1 - 0.55, c1 - 0.30, 0.10, 0.30, y + 0.86, y + 0.92, M.white); cyl(c1 - 0.18, 0.22, 0.08, y + 0.86, y + 1.04, clothMat(0xb9a58a), 18, 0.06);
+  box(c0 + 0.08, c1 - 0.08, 0.04, 0.34, y, y + 0.14, oak);                             // planter with pebbles and succulents
+  for (let k = 0, u = c0 + 0.14; u < c1 - 0.12; u += 0.07, k++) sph(u, 0.12 + (k % 3) * 0.08, y + 0.15, 0.035, k % 3 ? M.white : clothMat(0xc8c1b5));
+  for (let u = c0 + 0.30; u < c1 - 0.2; u += 0.36) for (let a = 0; a < 6; a++) { const [x, z] = world(u + Math.cos(a) * 0.05, 0.19 + Math.sin(a) * 0.05), cg = new THREE.ConeGeometry(0.025, 0.24, 6); cg.translate(x, y + 0.27, z); addMesh(parent, cg, leaf2, false, false); }
+  const ou = W + 0.42, ov = 0.30;                                                       // oak coat stand with two coats (replaces the olive tree)
+  cyl(ou, ov, 0.20, y, y + 0.025, oak, 28); cyl(ou, ov, 0.018, y + 0.025, y + 1.78, oak, 10); sph(ou, ov, y + 1.80, 0.03, oak);
+  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + 0.4, [hx, hz] = world(ou + Math.cos(a) * 0.09, ov + Math.sin(a) * 0.09), hg = new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6); hg.rotateZ(Math.cos(a) * 0.9); hg.rotateX(-Math.sin(a) * 0.9); hg.translate(hx, y + 1.66, hz); addMesh(parent, hg, oak, false, false); }
+  box(ou - 0.24, ou - 0.03, ov - 0.13, ov + 0.13, y + 0.62, y + 1.66, clothMat(0xa8875f));   // long camel coat
+  box(ou - 0.26, ou - 0.04, ov - 0.12, ov + 0.12, y + 1.40, y + 1.60, clothMat(0xa8875f));   // shoulders
+  box(ou + 0.03, ou + 0.22, ov - 0.12, ov + 0.12, y + 0.95, y + 1.66, clothMat(0x2b2f38));   // short navy coat
+  cyl(c0 + 0.40, 0.75, 0.004, y + 2.05, y + H, M.dark, 6);                              // pendant over the console
+  cyl(c0 + 0.40, 0.75, 0.13, y + 1.88, y + 2.05, clothMat(0xefe8dc), 24, 0.03); cyl(c0 + 0.40, 0.75, 0.10, y + 1.875, y + 1.885, M.led, 24);
+}
+function fLaundry(f, parent) {          // laundry run (B5, after the reference photo): light oak, open shelves with woven baskets, sink, washer + dryer side by side, tall cabinet
+  const G = fframe(f, f.back || 'w', parent), { W, D, box, cyl, world } = G, y = f.y0, oak = M.oak_top || M.wood, top = y + 0.90;
+  const bask = clothMat(0xb08a5a), towel = clothMat(0xf1ede4), conc = M.stone_top || M.white;
+  const basket = (u0, u1, ya, h) => box(u0 + 0.04, u1 - 0.04, 0.06, D - 0.06, ya, ya + h, bask);
+  // tall cabinet next to the window (south end)
+  const tc = W - 0.60; box(tc, W, 0, D, y, y + 2.40, oak); for (const yy of [0.80, 1.60]) box(tc + 0.02, W - 0.02, D - 0.002, D + 0.004, y + yy - 0.004, y + yy, M.dark, false);
+  box(tc + 0.04, tc + 0.06, D, D + 0.03, y + 1.05, y + 1.45, M.dark, false);
+  // worktop (light concrete/stone) over the rest
+  box(0, tc, 0, D + 0.02, top - 0.04, top, conc);
+  // washer + dryer side by side
+  const m0 = tc - 1.22;
+  for (let i = 0; i < 2; i++) { const u0 = m0 + 0.01 + i * 0.61; box(u0, u0 + 0.59, 0.02, D - 0.02, y, top - 0.05, M.white);
+    const [cx, cz] = world(u0 + 0.295, D - 0.01), g = new THREE.CylinderGeometry(0.19, 0.19, 0.03, 32); g.rotateZ(Math.PI / 2); g.translate(cx + 0.01, y + 0.45, cz); addMesh(parent, g, M.dark, false, false);
+    const g2 = new THREE.CylinderGeometry(0.15, 0.15, 0.035, 32); g2.rotateZ(Math.PI / 2); g2.translate(cx + 0.012, y + 0.45, cz); addMesh(parent, g2, M.glass, false, false); }
+  // sink unit: 2 drawers + open shelf with 2 baskets ; open basket shelves at the north end
+  const s0 = 0.58, s1 = m0;
+  box(s0, s1, 0, 0.03, y, top - 0.04, oak); box(s0, s0 + 0.02, 0, D, y, top - 0.04, oak); box(s1 - 0.02, s1, 0, D, y, top - 0.04, oak);
+  box(s0 + 0.02, s1 - 0.02, 0.03, D, top - 0.26, top - 0.04, oak); box((s0 + s1) / 2 - 0.004, (s0 + s1) / 2 + 0.004, D - 0.002, D + 0.004, top - 0.26, top - 0.04, M.dark, false);
+  for (const uu of [s0 + (s1 - s0) * 0.25, s0 + (s1 - s0) * 0.75]) box(uu - 0.08, uu + 0.08, D + 0.004, D + 0.02, top - 0.16, top - 0.145, M.dark, false);
+  box(s0 + 0.02, s1 - 0.02, 0.03, D, y + 0.30, y + 0.33, oak);
+  for (const [a, b] of [[s0, (s0 + s1) / 2], [(s0 + s1) / 2, s1]]) { basket(a, b, y + 0.02, 0.26); basket(a, b, y + 0.33, 0.26); }
+  box(0, 0.02, 0, D, y, top - 0.04, oak); box(0.02, s0, 0, 0.03, y, top - 0.04, oak); box(0.02, s0, 0.03, D, y + 0.42, y + 0.45, oak); basket(0, s0, y + 0.02, 0.36); basket(0, s0, y + 0.45, 0.36);
+  const su = (s0 + s1) / 2; box(su - 0.30, su + 0.30, 0.10, D - 0.10, top - 0.035, top + 0.001, M.white, false);           // sink + brass tap
+  if (!M.brass) { M.brass = new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.9, roughness: 0.3 }); M.brass.name = 'Brass'; }
+  cyl(su, 0.06, 0.015, top, top + 0.32, M.brass, 10); box(su - 0.01, su + 0.01, 0.06, 0.22, top + 0.30, top + 0.33, M.brass);
+  // concrete splashback, open oak shelves with baskets / towels, closed cabinets on top
+  box(0, tc, 0, 0.012, top, y + 1.50, conc);
+  for (const ys of [1.50, 1.92]) box(0, tc, 0, 0.36, y + ys, y + ys + 0.035, oak);
+  for (let u = 0.15, k = 0; u + 0.34 < tc - 0.05; u += 0.50, k++) {
+    if (k % 2) box(u, u + 0.32, 0.03, 0.30, y + 1.535, y + 1.535 + 0.06 * 4, towel); else box(u, u + 0.34, 0.03, 0.32, y + 1.535, y + 1.535 + 0.28, bask);
+    if (k % 2) box(u, u + 0.34, 0.03, 0.32, y + 1.955, y + 1.955 + 0.26, bask); else box(u, u + 0.32, 0.03, 0.30, y + 1.955, y + 1.955 + 0.20, towel);
+  }
+  box(0, tc, 0, 0.38, y + 2.25, y + 2.60, oak); for (let u = 0.6; u < tc; u += 0.6) box(u - 0.004, u + 0.004, 0.38, 0.384, y + 2.27, y + 2.58, M.dark, false);
+}
+function fMainBath(f, parent) {          // main bathroom after the reference photo (B5): world coords from the room box
+  const [x0, z0, x1, z1] = f.b, y = f.y0, oak = M.oak_top || M.wood, B = (a, b, c, d, e, g, m, cs = true) => addMesh(parent, mbox(a, b, e, g, c, d), m, cs, true);
+  const mk = (n, c, o = {}) => M[n] || (M[n] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6 }, o)), { name: n }));
+  const tile = mk('Bath_Tile_Greige', 0xb9b0a4), rib = mk('Bath_Tile_Ribbed', 0xc2b9ad, { roughness: 0.8 }), blk = mk('Matte_Black', 0x1d1c1b, { roughness: 0.45, metalness: 0.4 }), stoneT = mk('Bath_Top_Stone', 0xcfc8bd, { roughness: 0.4 });
+  if (!M.mirror) { M.mirror = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, metalness: 1, roughness: 0.04 }); M.mirror.name = 'Mirror'; }
+  // greige tile cladding on the walls (thin layer)
+  B(x0, x0 + 0.01, z0, z1, y, y + 2.60, tile, false); B(x1 - 0.01, x1, z0, z1, y, y + 2.60, tile, false); if (f.window) { const [wx0, wx1] = f.window, ws = y + (f.window_sill ?? 1.5), wh = y + (f.window_head ?? 2.2);      // ribbed tiles around a window in the z0 wall (f.window = [x from, x to]), left open
+    B(x0, x1, z0, z0 + 0.01, y, ws, rib, false); B(x0, x1, z0, z0 + 0.01, wh, y + 2.60, rib, false);
+    B(x0, wx0, z0, z0 + 0.01, ws, wh, rib, false); B(wx1, x1, z0, z0 + 0.01, ws, wh, rib, false); }
+  // walk-in shower at the north end: flush tray, fixed glass panel with black profile, rain head + hand shower, lit niche
+  const sz = z0 + 1.00, gx0 = x0 + 0.80;   // B5: shower 1,00 m deep (WC moved between it and the basin)
+  B(x0 + 0.01, x1 - 0.01, z0 + 0.01, sz, y, y + 0.012, mk('Bath_Tray', 0xd2cbc0), false);
+  const gA = x0 + 0.01, gB = x1 - 0.80;                    // B5: fixed glass against the WEST wall, entry on the east side
+  B(gA, gB, sz - 0.005, sz + 0.005, y + 0.02, y + 2.05, M.glass, false);
+  for (const [a, b, c, d] of [[gB - 0.02, gB, y, y + 2.05], [x0, gB, y + 2.03, y + 2.05], [x0, gB, y, y + 0.02]]) B(a, b, sz - 0.01, sz + 0.01, c, d, blk, false);
+  const shz = z0 + 0.50, sx = x0 + 0.32;                    // B5: rain head on an arm from the WEST wall, hand shower + mixer on that wall
+  B(x0 + 0.01, sx, shz - 0.01, shz + 0.01, y + 2.15, y + 2.17, blk); { const g = new THREE.CylinderGeometry(0.13, 0.13, 0.012, 28); g.translate(sx, y + 2.13, shz); addMesh(parent, g, blk, false, false); }
+  B(x0 + 0.01, x0 + 0.04, shz + 0.13, shz + 0.15, y + 0.95, y + 1.45, blk); B(x0 + 0.01, x0 + 0.06, shz + 0.11, shz + 0.17, y + 1.05, y + 1.12, blk);
+  { const r = new THREE.CylinderGeometry(0.02, 0.02, 0.01, 12); r.translate(sx + 0.15, y + 0.013, z0 + 0.50); addMesh(parent, r, blk, false, false); }
+  // wall-hung WC on the east wall, black flush plate, paper holder
+  const wz = sz + 0.42;                                     // B5: wall-hung WC on the WEST wall, between the shower and the basin
+  B(x0 + 0.002, x0 + 0.012, wz - 0.12, wz + 0.12, y + 0.95, y + 1.10, blk, false);
+  { const g = new THREE.CylinderGeometry(0.18, 0.16, 0.30, 28); g.scale(1.45, 1, 1); g.translate(x0 + 0.27, y + 0.27, wz); addMesh(parent, g, M.white, true, false);
+    const l = new THREE.CylinderGeometry(0.185, 0.185, 0.04, 28); l.scale(1.45, 1, 1); l.translate(x0 + 0.27, y + 0.44, wz); addMesh(parent, l, M.white, true, false); }
+  B(x0 + 0.01, x0 + 0.12, wz + 0.26, wz + 0.36, y + 0.70, y + 0.80, M.white, false);
+  // floating oak vanity on the west wall with stone top, LED underneath, integrated basin, black tap, black-framed mirror + two sconces
+  const vz0 = sz + 0.85, vz1 = Math.min(z1 - 0.25, vz0 + 1.30), vx = x0 + 0.50, vc = (vz0 + vz1) / 2;
+  B(x0, vx, vz0, vz1, y + 0.40, y + 0.82, oak); B(vx - 0.002, vx + 0.004, vz0 + 0.01, vz1 - 0.01, y + 0.605, y + 0.615, M.dark, false);
+  B(x0, vx + 0.03, vz0 - 0.02, vz1 + 0.02, y + 0.82, y + 0.86, stoneT); B(x0 + 0.10, vx - 0.06, vc - 0.28, vc + 0.28, y + 0.85, y + 0.861, M.white, false);
+  B(x0 + 0.02, vx - 0.03, vz0 + 0.05, vz1 - 0.05, y + 0.39, y + 0.40, M.led, false);
+  B(x0 + 0.01, x0 + 0.12, vc - 0.02, vc + 0.02, y + 0.86, y + 1.10, blk); B(x0 + 0.08, x0 + 0.20, vc - 0.015, vc + 0.015, y + 1.07, y + 1.10, blk);
+  B(x0 + 0.01, x0 + 0.04, vc - 0.40, vc + 0.40, y + 1.15, y + 2.05, blk); B(x0 + 0.04, x0 + 0.045, vc - 0.38, vc + 0.38, y + 1.17, y + 2.03, M.mirror, false);
+  for (const zz of [vc - 0.48, vc + 0.48]) { B(x0 + 0.01, x0 + 0.08, zz - 0.035, zz + 0.035, y + 1.40, y + 1.85, M.led, false); B(x0 + 0.01, x0 + 0.09, zz - 0.04, zz + 0.04, y + 1.58, y + 1.66, blk); }
+  { const g = new THREE.CylinderGeometry(0.06, 0.07, 0.16, 14); g.translate(x0 + 0.35, y + 0.94, vz0 + 0.12); addMesh(parent, g, M.white, false, false);
+    const sp = new THREE.SphereGeometry(0.09, 10, 8); sp.translate(x0 + 0.35, y + 1.08, vz0 + 0.12); addMesh(parent, sp, clothMat(0x6d7a45), false, false); }
+  B(x0 + 0.01, x0 + 0.06, vz1 - 0.02, vz1 + 0.02, y + 0.20, y + 0.80, clothMat(0x9a958e));
+  // small wooden stool + towel on the east wall near the door, textured rug
+  B(x1 - 0.06, x1 - 0.01, z1 - 1.10, z1 - 0.75, y + 0.85, y + 1.55, clothMat(0x6f6a64));
+  B(vx + 0.15, vx + 0.75, vc - 0.45, vc + 0.45, y + 0.005, y + 0.02, mk('Bath_Rug', 0xa79f95, { roughness: 1 }), false);
+  // recessed downlights
+  for (const [px, pz] of [[(x0 + x1) / 2, z0 + 0.55], [(x0 + x1) / 2, vc], [(x0 + x1) / 2, z1 - 0.35]]) { const d = new THREE.CylinderGeometry(0.035, 0.035, 0.01, 14); d.translate(px, y + 2.595, pz); addMesh(parent, d, M.led, false, false); }
+}
+function fOfficeChair(f, parent) {     // B5: comfortable ergonomic office chair (mesh back, headrest, armrests, 5-star base)
+  const [x0, z0, x1, z1] = f.b, y = f.y0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, face = f.face || 'e', dx = { e: 1, w: -1 }[face] || 0, dz = { s: 1, n: -1 }[face] || 0;
+  const blk = M.Matte_Black || M.dark, mesh = clothMat(0x2f3134), B = (a, b, c, d, e, g, m) => addMesh(parent, mbox(a, b, e, g, c, d), m, true, false);
+  for (let k = 0; k < 5; k++) { const a = k * 2 * Math.PI / 5, g = new THREE.BoxGeometry(0.30, 0.03, 0.04); g.translate(0.15, 0, 0); g.rotateY(a); g.translate(cx, y + 0.08, cz); addMesh(parent, g, blk, true, false);
+    const w = new THREE.SphereGeometry(0.03, 8, 6); w.translate(cx + Math.cos(a) * 0.29, y + 0.03, cz - Math.sin(a) * 0.29); addMesh(parent, w, blk, false, false); }
+  { const p = new THREE.CylinderGeometry(0.025, 0.025, 0.36, 10); p.translate(cx, y + 0.27, cz); addMesh(parent, p, blk, true, false); }
+  B(cx - 0.25, cx + 0.25, cz - 0.24, cz + 0.24, y + 0.44, y + 0.52, mesh);                        // seat
+  const bx = cx - dx * 0.24, bz = cz - dz * 0.24, hw = 0.23;                                       // back opposite the facing side
+  if (dx) { B(bx - 0.04, bx + 0.02 * -dx + 0.0, cz - hw, cz + hw, y + 0.55, y + 1.05, mesh); B(bx - 0.04, bx, cz - 0.13, cz + 0.13, y + 1.08, y + 1.20, mesh);
+    for (const s_ of [-1, 1]) B(cx - 0.12, cx + 0.12, cz + s_ * 0.25 - 0.025, cz + s_ * 0.25 + 0.025, y + 0.66, y + 0.69, blk); }
+  else { B(cx - hw, cx + hw, bz - 0.04, bz, y + 0.55, y + 1.05, mesh); B(cx - 0.13, cx + 0.13, bz - 0.04, bz, y + 1.08, y + 1.20, mesh);
+    for (const s_ of [-1, 1]) B(cx + s_ * 0.25 - 0.025, cx + s_ * 0.25 + 0.025, cz - 0.12, cz + 0.12, y + 0.66, y + 0.69, blk); }
+}
+function fOfficeDesk(f, parent) {      // B5: one large desk, dark grey top, 2 laptops each wired to a 4K monitor, printer at one end
+  const G = fframe(f, f.back || 'e', parent), { W, D, box, cyl } = G, y = f.y0, top = y + f.h;
+  const mk = (n, c, o = {}) => M[n] || (M[n] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.5 }, o)), { name: n }));
+  const grey = mk('Desk_Top_DarkGrey', 0x3a3c3f, { roughness: 0.45 }), alu = mk('Laptop_Alu', 0xb9bcc0, { metalness: 0.7, roughness: 0.3 }),
+        scr = mk('Screen_On', 0x1d2733, { emissive: 0x4d6f96, emissiveIntensity: 0.55, roughness: 0.2 }), blk = mk('Matte_Black', 0x1d1c1b, { roughness: 0.45, metalness: 0.4 });
+  box(0, W, 0, D, top - 0.035, top, grey);
+  for (const u of [0.03, W - 0.07]) box(u, u + 0.04, 0.05, D - 0.05, y, top - 0.035, blk);           // slim black legs
+  box(0.03, W - 0.03, 0.05, 0.09, y + 0.05, y + 0.09, blk);
+  const ws = [0.55, 1.55];
+  for (const c of ws) {
+    box(c - 0.08, c + 0.08, 0.08, 0.24, top, top + 0.012, blk); box(c - 0.02, c + 0.02, 0.12, 0.16, top, top + 0.38, blk);   // monitor stand
+    box(c - 0.36, c + 0.36, 0.14, 0.17, top + 0.12, top + 0.53, blk); box(c - 0.345, c + 0.345, 0.17, 0.172, top + 0.135, top + 0.515, scr, false);  // 32" 4K
+    const lu = c + 0.47;                                                                           // laptop to the right of its monitor, lid open
+    box(lu - 0.16, lu + 0.16, 0.30, 0.52, top, top + 0.015, alu);
+    box(lu - 0.16, lu + 0.16, 0.27, 0.285, top + 0.015, top + 0.225, alu); box(lu - 0.15, lu + 0.15, 0.285, 0.287, top + 0.025, top + 0.215, scr, false);
+    box(c - 0.22, c + 0.22, 0.42, 0.56, top, top + 0.012, mk('Keyboard', 0x2b2b2d)); box(c + 0.27, c + 0.33, 0.45, 0.55, top, top + 0.02, mk('Keyboard', 0x2b2b2d));
+    box(lu - 0.005, c, 0.20, 0.205, top, top + 0.004, blk, false);                                 // cable laptop → monitor
+  }
+  const pu = W - 0.22; box(pu - 0.20, pu + 0.20, 0.06, 0.46, top, top + 0.24, mk('Printer', 0xe6e6e3, { roughness: 0.6 })); box(pu - 0.15, pu + 0.15, 0.30, 0.47, top + 0.24, top + 0.25, blk);
+}
+function fPantry(f, parent) {          // B5: pantry wall — pull-out drawers below (closed oak fronts + wire baskets), shelves with uneven dividers and goods above
+  const G = fframe(f, f.back || 'w', parent), { W, D, box, cyl } = G, y = f.y0, H = f.h, oak = M.oak_top || M.wood;
+  const mk = (n, c, o = {}) => M[n] || (M[n] = Object.assign(new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6 }, o)), { name: n }));
+  const wire = mk('Wire_Chrome', 0x9aa0a6, { metalness: 0.85, roughness: 0.3 }), blk = M.dark;
+  box(0, W, 0, 0.015, y, y + H, oak); box(0, 0.02, 0, D, y, y + H, oak); box(W - 0.02, W, 0, D, y, y + H, oak);
+  // lower part: 3 columns × 2 pull-out drawers
+  const V2 = f.v === 2, cols = V2 ? 2 : 3, cw = (W - 0.04) / cols, kinds = V2 ? [['m', 'c'], ['c', 'm']] : [['c', 'c'], ['m', 'm'], ['c', 'm']], LH = 0.74;
+  box(0, W, 0, D, y + LH, y + LH + 0.03, oak);
+  for (let i = 1; i < cols; i++) box(0.02 + i * cw - 0.01, 0.02 + i * cw + 0.01, 0.015, D, y, y + LH, oak);
+  for (let i = 0; i < cols; i++) for (let j = 0; j < 2; j++) {
+    const u0 = 0.02 + i * cw + 0.015, u1 = 0.02 + (i + 1) * cw - 0.015, y0 = y + 0.04 + j * 0.35, y1 = y0 + 0.32;
+    if (kinds[i][j] === 'c') { box(u0, u1, D - 0.02, D, y0, y1, oak); box((u0 + u1) / 2 - 0.08, (u0 + u1) / 2 + 0.08, D, D + 0.02, y1 - 0.06, y1 - 0.045, blk); }
+    else {                                                                          // wire basket: front rails + vertical wires, goods visible inside
+      for (const yy of [y0, y0 + 0.15, y1 - 0.01]) box(u0, u1, D - 0.015, D, yy, yy + 0.01, wire);
+      for (let u = u0; u <= u1 + 1e-6; u += 0.035) box(u - 0.003, u + 0.003, D - 0.012, D - 0.006, y0, y1, wire, false);
+      box(u0, u1, 0.05, D - 0.02, y0, y0 + 0.008, wire, false);
+      const goods = j ? [0xc9a36b, 0xe7d9b4, 0x8a5a2b] : [0xd9a441, 0x9b2f22, 0xe8e0c8];   // potatoes / onions / bread-like
+      for (let k = 0; k < 6; k++) { const g = new THREE.SphereGeometry(0.045, 8, 6), [gx, gz] = G.world(u0 + 0.05 + (k % 3) * (u1 - u0 - 0.1) / 2, 0.12 + Math.floor(k / 3) * 0.14); g.translate(gx, y0 + 0.055, gz); addMesh(parent, g, clothMat(goods[k % 3]), false, false); }
+    }
+  }
+  // upper part: shelves with dividers in different places (compartments of different sizes)
+  const lv = V2 ? [LH + 0.03, 1.05, 1.38, 1.62, 1.95, H - 0.03] : [LH + 0.03, 1.10, 1.48, 1.80, 2.12, H - 0.03], dv = V2 ? [[0.55], [0.30, 0.95], [0.80], [0.40, 0.70, 1.05], []] : [[0.45, 1.05], [0.70], [0.35, 0.80, 1.15], [0.60, 1.00], [0.75]];
+  for (const l of lv.slice(1)) box(0.02, W - 0.02, 0.015, D - 0.02, y + l, y + l + 0.025, oak);
+  dv.forEach((us, i) => { for (const u of us) box(u - 0.01, u + 0.01, 0.015, D - 0.02, y + lv[i] + 0.025, y + lv[i + 1], oak); });
+  const jar = (u, v, yb, h, r, c) => { cyl(u, v, r, yb, yb + h, M.glass, 16); cyl(u, v, r * 0.92, yb + 0.005, yb + h * 0.75, clothMat(c), 14); cyl(u, v, r * 0.9, yb + h, yb + h + 0.02, oak, 14); };
+  const can = (u, v, yb, c) => cyl(u, v, 0.037, yb, yb + 0.11, mk('Can_' + c.toString(16), c, { metalness: 0.5, roughness: 0.4 }), 14);
+  const boxI = (u, v, yb, w, h, c) => box(u, u + w, v, v + 0.20, yb, yb + h, clothMat(c));
+  const bottle = (u, v, yb, c) => { cyl(u, v, 0.035, yb, yb + 0.22, mk('Bottle_' + c.toString(16), c, { roughness: 0.15, transparent: true, opacity: 0.85 }), 12); cyl(u, v, 0.012, yb + 0.22, yb + 0.30, blk, 8); };
+  const b0 = y + lv[0] + 0.03, b1 = y + lv[1] + 0.025, b2 = y + lv[2] + 0.025, b3 = y + lv[3] + 0.025, b4 = y + lv[4] + 0.025, v = D * 0.5;
+  if (V2) {                                                                        // second wall: other goods
+    for (let k = 0; k < 4; k++) bottle(0.08 + k * 0.10, v, b0, [0x2a4d1f, 0x7a1424, 0xd8c27a, 0x3a2416][k]);   // oil, wine, vinegar, soy
+    boxI(0.62, 0.06, b0, 0.30, 0.20, 0x6b8e4e); boxI(0.95, 0.06, b0, 0.33, 0.14, 0xefe3c8);                    // tea crates, flour
+    for (let k = 0; k < 3; k++) jar(0.06 + k * 0.08, v, b1, 0.14, 0.03, [0xd04a2a, 0xe8b83a, 0x7b4a2a][k]);   // spices
+    boxI(0.34, 0.06, b1, 0.55, 0.20, 0xb8c9a6); for (let k = 0; k < 4; k++) can(1.00 + k * 0.08, v, b1, [0x2e7d4f, 0xe0c23a, 0xb22d2d, 0x3b6ea5][k]);
+    for (let k = 0; k < 6; k++) jar(0.06 + k * 0.12, v, b2, 0.16, 0.045, [0xf3efe3, 0xdcc48a, 0x8a5a2b, 0xf0d9a0, 0x5c3b1e, 0xe4dccb][k]);
+    boxI(0.84, 0.06, b2, 0.45, 0.18, 0xd9cbb4);
+    boxI(0.04, 0.05, b3, 0.33, 0.22, 0x5d6b78); boxI(0.44, 0.05, b3, 0.24, 0.24, 0xe6dcc9); boxI(0.74, 0.05, b3, 0.28, 0.20, 0xc9b28d); boxI(1.08, 0.05, b3, 0.22, 0.22, 0x9fb6c6);
+    boxI(0.06, 0.05, b4, 1.20, 0.25, 0xd9cbb4);
+    return;
+  }
+  for (let k = 0; k < 5; k++) jar(0.09 + k * 0.075, v, b0, 0.18, 0.032, [0xe8d6a8, 0x8b5a2b, 0xf3efe3, 0xc8913a, 0x5b3b22][k]);   // pasta, coffee, rice, lentils…
+  boxI(0.50, 0.08, b0, 0.20, 0.26, 0xd8432e); boxI(0.73, 0.08, b0, 0.16, 0.22, 0xf2c14e); boxI(0.92, 0.08, b0, 0.10, 0.24, 0x3b6ea5);
+  for (let k = 0; k < 3; k++) bottle(1.13 + k * 0.10, v, b0, [0x5f7d2a, 0x8a1c2b, 0xcaa64a][k]);
+  for (let k = 0; k < 7; k++) can(0.08 + (k % 4) * 0.085, 0.12 + Math.floor(k / 4) * 0.12, b1, [0xb22d2d, 0xe0c23a, 0x2e7d4f, 0xd36b2b][k % 4]);
+  for (let k = 0; k < 4; k++) jar(0.78 + k * 0.10, v, b1, 0.22, 0.04, [0xf2e2b0, 0xb07a3c, 0xe9e1d0, 0x6e4b2a][k]);
+  boxI(0.05, 0.08, b2, 0.26, 0.22, 0xece6da); boxI(0.40, 0.08, b2, 0.36, 0.20, 0x9fb6c6); for (let k = 0; k < 4; k++) can(0.88 + k * 0.08, v, b2, 0xb22d2d + k * 0x101010);
+  boxI(1.20, 0.10, b2, 0.25, 0.25, 0xc6a272);
+  boxI(0.06, 0.06, b3, 0.48, 0.24, 0xc9b28d); boxI(0.66, 0.06, b3, 0.30, 0.26, 0xe6dcc9); boxI(1.05, 0.06, b3, 0.38, 0.22, 0xb59b74);   // storage baskets
+  boxI(0.10, 0.06, b4, 0.55, 0.22, 0xe6dcc9); boxI(0.82, 0.06, b4, 0.55, 0.22, 0xc9b28d);
+}
+function fPouf(f, parent) {
+  const [x0, z0, x1, z1] = f.b, r = Math.min(x1 - x0, z1 - z0) / 2, g = new THREE.CylinderGeometry(r, r, f.h, 32);
+  g.translate((x0 + x1) / 2, f.y0 + f.h / 2, (z0 + z1) / 2); addMesh(parent, g, M.fabric);
+}
+function fPowderRoom(f, parent) {       // small WC after the reference photo (B5): world coords from the room box; WC on the north wall, basin on the west wall
+  const [x0, z0, x1, z1] = f.b, y = f.y0, oak = M.oak_top || M.wood, B = (a, b, c, d, e, g, m, cs = true) => addMesh(parent, mbox(a, b, e, g, c, d), m, cs, true);   // B(x0, x1, z0, z1, y0, y1)
+  if (!M.beige) { M.beige = new THREE.MeshStandardMaterial({ color: 0xcfc3b3, roughness: 0.55 }); M.beige.name = 'Stone_Beige'; }
+  if (!M.cab) { M.cab = new THREE.MeshStandardMaterial({ color: 0xd9cdbd, roughness: 0.7 }); M.cab.name = 'Cabinet_Taupe'; }
+  if (!M.matblack) { M.matblack = new THREE.MeshStandardMaterial({ color: 0x1d1c1b, roughness: 0.45, metalness: 0.4 }); M.matblack.name = 'Matte_Black'; }
+  // B5 rev.: WC on the west wall (stone duct + lit niche), basin + large backlit oval mirror facing the door (north wall), tall cabinet on the east wall (living-room side)
+  const zc = (z0 + z1) / 2, dxw = x0 + 0.22;
+  B(x0, dxw, z0, z1, y, y + 1.15, M.beige);                                              // stone-clad duct along the west wall
+  B(x0, x0 + 0.02, z0, z1, y + 1.15, y + 1.48, oak); B(x0, dxw, z0, z1, y + 1.47, y + 1.50, oak);
+  B(dxw - 0.06, dxw - 0.04, z0 + 0.03, z1 - 0.03, y + 1.455, y + 1.465, M.led, false);
+  { const g = new THREE.CylinderGeometry(0.06, 0.05, 0.10, 14); g.translate(x0 + 0.11, y + 1.20, z0 + 0.30); addMesh(parent, g, M.white, false, false);
+    const sp = new THREE.SphereGeometry(0.09, 10, 8); sp.translate(x0 + 0.11, y + 1.32, z0 + 0.30); addMesh(parent, sp, clothMat(0x6d7a45), false, false);
+    B(x0 + 0.06, x0 + 0.12, z1 - 0.32, z1 - 0.26, y + 1.15, y + 1.27, clothMat(0x4a3526), false); }
+  B(dxw, dxw + 0.012, zc - 0.12, zc + 0.12, y + 0.92, y + 1.08, M.matblack, false);       // flush plate
+  { const g = new THREE.CylinderGeometry(0.18, 0.16, 0.30, 28); g.scale(1.45, 1, 1); g.translate(dxw + 0.27, y + 0.27, zc); addMesh(parent, g, M.white, true, false);
+    const l = new THREE.CylinderGeometry(0.185, 0.185, 0.04, 28); l.scale(1.45, 1, 1); l.translate(dxw + 0.27, y + 0.44, zc); addMesh(parent, l, M.white, true, false); }
+  const bx = f.basin_x ?? (x0 + x1) / 2, bz1 = z0 + 0.42;                                // floating basin on the z0 wall (f.basin_x: e.g. on the door axis)
+  B(bx - 0.32, bx + 0.32, z0, bz1, y + 0.68, y + 0.86, M.beige); B(bx - 0.24, bx + 0.24, z0 + 0.10, bz1 - 0.06, y + 0.80, y + 0.861, M.white, false);
+  B(bx - 0.28, bx + 0.28, z0, bz1 - 0.06, y + 0.48, y + 0.68, oak);
+  B(bx - 0.03, bx + 0.03, z0, z0 + 0.05, y + 0.97, y + 1.00, M.matblack); B(bx - 0.012, bx + 0.012, z0 + 0.04, z0 + 0.20, y + 0.985, y + 1.005, M.matblack);
+  B(bx + 0.32, bx + 0.36, z0 + 0.06, z0 + 0.36, y + 0.40, y + 0.84, clothMat(0xb9b0a3));
+  if (!M.mirror) { M.mirror = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, metalness: 1, roughness: 0.04 }); M.mirror.name = 'Mirror'; }
+  for (const [r, m, dz_] of [[1.0, M.led, 0.005], [0.95, M.mirror, 0.02]]) {             // large backlit oval mirror 0,64 × 1,20 m
+    const g = new THREE.CylinderGeometry(0.32 * r, 0.32 * r, 0.012, 48); g.rotateX(Math.PI / 2); g.scale(1, 1.875, 1); g.translate(bx, y + 1.58, z0 + dz_); addMesh(parent, g, m, false, false); }
+  for (const px of [bx - 0.50]) { const c = new THREE.CylinderGeometry(0.003, 0.003, 0.60, 6); c.translate(px, y + 2.25, z0 + 0.25); addMesh(parent, c, M.matblack, false, false);
+    const p = new THREE.CylinderGeometry(0.03, 0.03, 0.40, 16); p.translate(px, y + 1.75, z0 + 0.25); addMesh(parent, p, M.matblack, false, false);
+    const d = new THREE.CylinderGeometry(0.02, 0.02, 0.01, 12); d.translate(px, y + 1.545, z0 + 0.25); addMesh(parent, d, M.led, false, false); }
+  const cx0 = x1 - 0.30, cz1 = z1 - 0.20;                                                // tall cabinet on the east wall with a lit niche
+  B(cx0, x1, z0, cz1, y, y + 1.00, M.cab); B(cx0, x1, z0, cz1, y + 1.30, y + 2.45, M.cab);
+  B(x1 - 0.02, x1, z0, cz1, y + 1.00, y + 1.30, oak); B(cx0, x1, z0, cz1, y + 1.00, y + 1.02, oak); B(cx0 + 0.04, cx0 + 0.06, z0 + 0.03, cz1 - 0.03, y + 1.285, y + 1.295, M.led, false);
+  for (const yy of [0.5, 1.88]) B(cx0 - 0.004, cx0, z0 + 0.02, cz1 - 0.02, y + yy - 0.003, y + yy + 0.003, M.dark, false);
+  B(cx0 - 0.004, cx0, (z0 + cz1) / 2 - 0.003, (z0 + cz1) / 2 + 0.003, y + 0.02, y + 2.43, M.dark, false);
+  B(x1 - 0.20, x1 - 0.12, z0 + 0.15, z0 + 0.23, y + 1.02, y + 1.14, clothMat(0x4a3526), false); B(x1 - 0.22, x1 - 0.10, cz1 - 0.30, cz1 - 0.18, y + 1.02, y + 1.08, M.white, false);
+}
+function fShoeUnit(f, parent) {        // B5: slim divider unit (0,35 m) — open shelves to the closet side: shoes low, bags middle, hats on top; oak back to the bed
+  const G = fframe(f, f.back || 'e', parent), { W, D, box, cyl } = G, y = f.y0, H = f.h, oak = M.oak_top || M.wood;
+  box(0, W, 0.012, 0.03, y, y + H, oak); box(0, W, 0, 0.012, y, y + H, M.render_in || M.white);   // back to the bedroom painted like the walls
+  box(0, 0.025, 0.012, D, y, y + H, oak); box(W - 0.025, W, 0.012, D, y, y + H, oak);
+  const levels = [0.0, 0.18, 0.36, 0.54, 0.72, 1.05, 1.45, 1.85, 2.25, H - 0.03];
+  for (const l of levels) box(0.025, W - 0.025, 0.03, D, y + l, y + l + 0.025, oak);
+  for (let i = 0; i < levels.length - 1; i++) box(0.03, W - 0.03, D - 0.05, D - 0.04, y + levels[i + 1] - 0.012, y + levels[i + 1] - 0.004, M.led, false);
+  const shoe = [0x1d1c1b, 0xc8a27a, 0xf2efe8, 0x8a2f35, 0x5a4636, 0xd8c6b0];
+  for (let i = 0; i < 4; i++) for (let u = 0.06, k = 0; u + 0.26 < W - 0.04; u += 0.30, k++) {
+    const c = clothMat(shoe[(i * 3 + k) % shoe.length]); box(u, u + 0.10, 0.06, 0.30, y + levels[i] + 0.025, y + levels[i] + 0.10, c); box(u + 0.13, u + 0.23, 0.06, 0.30, y + levels[i] + 0.025, y + levels[i] + 0.10, c); }
+  const bag = [0xe8d8c4, 0x2b2a28, 0xb5876a, 0xf4e9e2, 0x7d5a44];
+  for (let i = 4; i < 7; i++) for (let u = 0.08, k = 0; u + 0.30 < W - 0.05; u += 0.42, k++) {
+    const c = clothMat(bag[(i + k) % bag.length]); box(u, u + 0.30, 0.08, 0.28, y + levels[i] + 0.025, y + levels[i] + 0.25, c);
+    box(u + 0.08, u + 0.22, 0.17, 0.19, y + levels[i] + 0.25, y + levels[i] + 0.32, c); }
+  for (let i = 7; i < 9; i++) for (let u = 0.20, k = 0; u + 0.15 < W - 0.05; u += 0.40, k++) {
+    const c = clothMat([0xd9c3a0, 0x3a3532, 0xefe6d6][(i + k) % 3]); cyl(u, D / 2, 0.17, y + levels[i] + 0.025, y + levels[i] + 0.035, c, 24); cyl(u, D / 2, 0.09, y + levels[i] + 0.035, y + levels[i] + 0.14, c, 20, 0.08); }
+}
+function fSlatDivider(f, parent) {      // floor-to-ceiling oak slat divider (B5, reference photo): slats along the long side, top and bottom rails
+  const [x0, z0, x1, z1] = f.b, y = f.y0, H = f.h, oak = M.oak_top || M.wood, alongZ = (z1 - z0) >= (x1 - x0);
+  const L = alongZ ? z1 - z0 : x1 - x0, B = (a, b, c, d, e, g, m) => addMesh(parent, mbox(a, b, e, g, c, d), m, true, true);
+  const sw = 0.045, gap = 0.035, n = Math.floor((L + gap) / (sw + gap)), off = (L - (n * sw + (n - 1) * gap)) / 2;
+  for (let i = 0; i < n; i++) { const u = off + i * (sw + gap);
+    if (alongZ) B(x0 + 0.02, x1 - 0.02, z0 + u, z0 + u + sw, y, y + H, oak); else B(x0 + u, x0 + u + sw, z0 + 0.02, z1 - 0.02, y, y + H, oak); }
+  if (alongZ) { B(x0, x1, z0, z1, y + H - 0.05, y + H, oak); B(x0, x1, z0, z1, y, y + 0.04, oak); } else { B(x0, x1, z0, z1, y + H - 0.05, y + H, oak); B(x0, x1, z0, z1, y, y + 0.04, oak); }
+}
+function fVanityMakeup(f, parent) {     // B5: make-up corner — floating oak desk with drawer, large mirror with LED frame, stool, small accessories
+  const G = fframe(f, f.back || 'n', parent), { W, D, box, cyl } = G, y = f.y0, oak = M.oak_top || M.wood;
+  if (!M.mirror) { M.mirror = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, metalness: 1, roughness: 0.04 }); M.mirror.name = 'Mirror'; }
+  box(0, W, 0, D, y + 0.62, y + 0.76, oak); box(0.04, W - 0.04, D - 0.004, D + 0.002, y + 0.685, y + 0.69, M.dark, false);
+  box(0.02, 0.06, 0.02, D - 0.04, y, y + 0.62, oak); box(W - 0.06, W - 0.02, 0.02, D - 0.04, y, y + 0.62, oak);
+  box(0.06, W - 0.06, 0, 0.02, y + 0.95, y + 2.15, M.led, false); box(0.10, W - 0.10, 0.02, 0.03, y + 0.99, y + 2.11, M.mirror, false);
+  for (let k = 0; k < 6; k++) { const u = 0.10 + k * (W - 0.20) / 5; cyl(u, 0.04, 0.03, y + 2.14, y + 2.20, M.led, 12); }
+  cyl(W * 0.25, D * 0.45, 0.04, y + 0.76, y + 0.86, clothMat(0xe7c3c8), 12); cyl(W * 0.33, D * 0.40, 0.03, y + 0.76, y + 0.90, M.glass, 12); box(W * 0.65, W * 0.85, 0.15, 0.30, y + 0.76, y + 0.80, clothMat(0x2b2a28));
+  cyl(W / 2, D + 0.22, 0.20, y + 0.40, y + 0.46, clothMat(0xf2e6dc), 24); cyl(W / 2, D + 0.22, 0.03, y, y + 0.40, oak, 10);
+}
 function furnModel(f, parent) {
   const n = (f.name || '').toLowerCase(), [x0, z0, x1, z1] = f.b, y = f.y0, H = f.h, m = M[f.mat] || M.white;
   const plain = () => addMesh(parent, mbox(x0, x1, y, y + Math.max(0.01, H), z0, z1), m, H > 0.05, true);
@@ -767,6 +1134,31 @@ function furnModel(f, parent) {
     if (/base de duche/.test(n)) { const G = F(); G.box(G.W - 0.01, G.W, 0, G.D, y + H, y + 2.0, M.glass, false); }   // glass screen on the open side
     return;
   }
+  if (/^luz|^spot/.test(n)) {   // small recessed downlight: emissive disc just under the ceiling surface
+    const r = Math.min(x1 - x0, z1 - z0) / 2, g = new THREE.CylinderGeometry(r, r, Math.max(0.01, H), 16); g.translate((x0 + x1) / 2, y + Math.max(0.01, H) / 2, (z0 + z1) / 2);
+    return addMesh(parent, g, M.led, false, false);
+  }
+  if (/^espelho|^mirror/.test(n)) {     // round wall mirror: thin disc against the wall (axis across the thin side of the box)
+    if (!M.mirror) { M.mirror = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, metalness: 1.0, roughness: 0.04 }); M.mirror.name = 'Mirror'; }
+    const thinX = (x1 - x0) < (z1 - z0), r = H / 2, t = thinX ? x1 - x0 : z1 - z0;
+    const g = new THREE.CylinderGeometry(r, r, t, 40); if (thinX) g.rotateZ(Math.PI / 2); else g.rotateX(Math.PI / 2);
+    g.translate((x0 + x1) / 2, y + r, (z0 + z1) / 2); addMesh(parent, g, M.mirror, false, false);
+    const fr = new THREE.TorusGeometry(r, 0.012, 8, 48); if (thinX) fr.rotateY(Math.PI / 2); fr.translate((x0 + x1) / 2, y + r, (z0 + z1) / 2);
+    return addMesh(parent, fr, M.dark, false, false);
+  }
+  if (/^churrasqueira$|barbecue|^bbq/.test(n)) return /cozinha|kitchen/.test(f.style || '') ? fBBQ2(f, parent) : fBBQ(f, parent);   // f.style 'kitchen': outdoor kitchen run
+  if (/^despensa (fundo|lado)|^pantry (back|side)/.test(n)) return fPantry(f, parent);
+  if (/^mesa escritório dupla|^(double|office) desk/.test(n)) return fOfficeDesk(f, parent);
+  if (/^cadeira escritório|^office chair/.test(n)) return fOfficeChair(f, parent);
+  if (/^closet sapatos|^shoe (rack|unit)/.test(n)) return fShoeUnit(f, parent);
+  if (/^toucador|^dressing table|^make-?up/.test(n)) return fVanityMakeup(f, parent);
+  if (/^closet |^walk-in /.test(n)) return fClosetUnit(f, parent);
+  if (/^hall ripado|^hall (slats|entry)/.test(n)) return fHallEntry(f, parent);
+  if (/^lavandaria móvel|^laundry unit/.test(n)) return fLaundry(f, parent);
+  if (/^is social|^powder room|^guest wc/.test(n)) return fPowderRoom(f, parent);
+  if (/^is principal|^main bath/.test(n)) return fMainBath(f, parent);
+  if (/^ripado|^slat (screen|divider)/.test(n)) return fSlatDivider(f, parent);
+  if (/^puff|^pouf/.test(n)) return fPouf(f, parent);
   if (/forno a lenha|wood.?fired/.test(n)) return fOven(f, parent);
   if (/^carro|^car\b/.test(n)) return fCar(f, parent);
   if (/^cama|bed\b/.test(n)) return fBed(f, parent);
@@ -776,6 +1168,29 @@ function furnModel(f, parent) {
     const others = LAY.furniture.filter(touch), ends = [G.world(0.05, G.D / 2), G.world(G.W - 0.05, G.D / 2)];
     const free = ([px, pz]) => !others.some(o => px > o.b[0] - 0.1 && px < o.b[2] + 0.1 && pz > o.b[1] - 0.1 && pz < o.b[3] + 0.1);
     return fSofa(f, G, y, H, { l: free(ends[0]) && !/perna|leg/.test(n), r: free(ends[1]) && !/perna|leg/.test(n) });
+  }
+  if (/ondulad|wave/.test(n)) {   // wave chaise longue: curved shell extruded across its width, two dark supports
+    const alongZ = (z1 - z0) >= (x1 - x0), L = alongZ ? z1 - z0 : x1 - x0, Wd = alongZ ? x1 - x0 : z1 - z0;
+    const flip = alongZ ? f.head === 's' : f.head === 'e';
+    const prof = [[0, 0.72], [0.12, 0.62], [0.3, 0.38], [0.45, 0.3], [0.62, 0.36], [0.76, 0.47], [0.9, 0.34], [1, 0.2]];
+    const curve = new THREE.SplineCurve(prof.map(([t, h]) => new THREE.Vector2(t * L, h)));
+    const top = curve.getPoints(40), sh = new THREE.Shape();
+    top.forEach((p, i) => i ? sh.lineTo(p.x, p.y) : sh.moveTo(p.x, p.y));
+    for (let i = top.length - 1; i >= 0; i--) sh.lineTo(top[i].x, top[i].y - 0.05);
+    sh.closePath();
+    const g = new THREE.ExtrudeGeometry(sh, { depth: Wd, bevelEnabled: false, curveSegments: 4 });
+    const P = g.attributes.position;
+    for (let i = 0; i < P.count; i++) {
+      const v = flip ? L - P.getX(i) : P.getX(i), hh = P.getY(i), u = P.getZ(i);
+      if (alongZ) P.setXYZ(i, x0 + u, y + hh, z0 + v); else P.setXYZ(i, x0 + v, y + hh, z0 + u);
+    }
+    g.computeVertexNormals(); addMesh(parent, g, M.white);
+    for (const t of [0.22, 0.86]) {
+      const v = (flip ? 1 - t : t) * L, hb = curve.getPoint(t).y - 0.05;
+      if (alongZ) addMesh(parent, mbox(x0 + 0.06, x1 - 0.06, y, y + hb, z0 + v - 0.03, z0 + v + 0.03), M.dark);
+      else addMesh(parent, mbox(x0 + v - 0.03, x0 + v + 0.03, y, y + hb, z0 + 0.06, z1 - 0.06), M.dark);
+    }
+    return;
   }
   if (/espreguiçadeira|lounger/.test(n) || (f.mat === 'white' && Math.abs(H - 0.35) < 0.01)) {
     const G = F('n'), { W, D, box } = G; box(0, W, 0.5, D, y + 0.18, y + 0.3, M.white);
