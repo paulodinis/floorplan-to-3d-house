@@ -6,14 +6,11 @@ const { chromium } = require('playwright');
   const page = await browser.newPage({ viewport: { width: shots[0].w || 1400, height: shots[0].h || 860 } });
   page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('console', m.type(), m.text().slice(0, 200)); });
   page.on('pageerror', e => console.log('pageerror', e.message));
-  const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
-  const map = { 'build/three.module.js': T + '/three.module.js', 'build/three.shaderchunks.js': T + '/three.shaderchunks.js', 'controls/OrbitControls.js': T + '/OrbitControls.js',
-    'exporters/GLTFExporter.js': T + '/GLTFExporter.js', 'utils/TextureUtils.js': T + '/TextureUtils.js' };
+  const { localAsset } = require('./local_assets');   // bundled three.js r187 + tex/ + models/
   await page.route('**/*', route => {
     const u = route.request().url();
-    for (const k in map) if (u.includes(k)) return route.fulfill({ path: map[k], contentType: 'text/javascript' });
+    const f = localAsset(u, S); if (f) return route.fulfill(f);
     if (u.startsWith('https://fonts')) return route.abort();
-    if (u.includes('/tex/')) { const n = u.split('/tex/')[1]; return route.fulfill({ path: S + '/site3d/tex/' + n, contentType: n.endsWith('.png') ? 'image/png' : n.endsWith('.txt') ? 'text/plain' : 'image/jpeg' }); }
     if (u.startsWith('http://local/')) return route.fulfill({ path: S + '/site3d/' + page_, contentType: 'text/html' });
     return route.continue();
   });

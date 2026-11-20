@@ -7,13 +7,11 @@ const ROUTE = process.env.NAV_ROUTE ? JSON.parse(fs.readFileSync(process.env.NAV
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
   page.on('pageerror', e => console.log('pageerror', e.message));
-  const T = require('path').join(__dirname, '..', 'web', 'three');   // bundled three.js r160
-  const map = { 'build/three.module.js': T + '/three.module.js', 'build/three.shaderchunks.js': T + '/three.shaderchunks.js', 'controls/OrbitControls.js': T + '/OrbitControls.js' };
+  const { localAsset } = require('./local_assets');   // bundled three.js r187 + tex/ + models/
   await page.route('**/*', route => {
     const u = route.request().url();
-    for (const k in map) if (u.includes(k)) return route.fulfill({ path: map[k], contentType: 'text/javascript' });
+    const f = localAsset(u, S); if (f) return route.fulfill(f);
     if (u.startsWith('https://fonts')) return route.abort();
-    if (u.includes('/tex/')) { const n = u.split('/tex/')[1]; return route.fulfill({ path: S + '/site3d/tex/' + n, contentType: n.endsWith('.png') ? 'image/png' : n.endsWith('.txt') ? 'text/plain' : 'image/jpeg' }); }
     if (u.startsWith('http://local/')) return route.fulfill({ path: S + '/site3d/page.html', contentType: 'text/html' });
     return route.continue();
   });

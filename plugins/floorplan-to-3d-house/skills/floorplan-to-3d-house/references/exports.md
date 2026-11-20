@@ -7,7 +7,7 @@
    - Debugging only: `node scripts/cloud/shot2.js '[{"actions":["#v-street"],"out":"tmp/s.png"}]'` (actions are CSS selectors or `js:<code>`), about 3 min per page load.
    - Walk mode: `NAV_ROUTE=route.json node scripts/cloud/navtest.js` (text output, no images) when the layout changed doors, stairs or walls on the walking path.
    - Chromium flags: `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`.
-4. Publish `site3d/publish.html` and every file in `site3d/tex/` with the Artifact tool. It must be a full `<!DOCTYPE html>` document. `.hdr` is not served, so the sky ships as `sky.jpg` (sRGB at 1/4 of its HDR radiance; `engine.js` restores the range). Republish to the same link.
+4. Publish `site3d/publish.html`, every file in `site3d/tex/` and every file in `site3d/models/` with the Artifact tool (`models/<name>.glb.json` keep their folder: the host serves no `.glb`, so each GLB ships as base64 JSON). It must be a full `<!DOCTYPE html>` document. `.hdr` is not served, so the sky ships as `sky.jpg` (sRGB at 1/4 of its HDR radiance; `engine.js` restores the range). Republish to the same link.
 
 ## Step 7. Exports and AI pack
 Elevations and the sun report go with the version approved for 3D (or when asked), not with every plan revision. Present the sun report from `sun_report.md` (text); don't read `sun_ground.png` unless the user asks about it.
