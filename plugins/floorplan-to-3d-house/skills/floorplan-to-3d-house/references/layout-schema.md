@@ -13,7 +13,7 @@ Units are metres. Scene axes: **x east, z south** (sheet axes), **y up**, with y
 | `roofs` | `[{rect, eave, name}]` | Hipped roof over the union of rectangles that share an eave height. Lower roofs can slide under higher eaves; valleys come out on their own. |
 | `floors` | `[{poly, y, mat, name}]` | Slabs (0.35 thick). `mat`: `oak`, `stone_floor`, `porcelain`, `concrete` or `terrace`. |
 | `stairs` | `[{x0, x1, z0, z1, ytop, ybot, n}]` | Straight run **along x**, top at `x0`, `n` risers, one block per tread. Leave ≥ 0.9 m of level floor before the top step. |
-| `rooms` | `[{name, poly, level, area}]` | Labels and areas on the 2D plan. Names steer the QA type checks (EN or PT keywords). |
+| `rooms` | `[{name, poly, level, area}]` | Labels and areas on the 2D plan. Names steer the QA type checks (EN or PT keywords). The *areas* layer also draws each room's inside width and depth (wall to wall) from this polygon. |
 | `grading` | `{upper, lower, t1, t2, x_w1, x_w2, x_w3, upper_slope_from_z, upper_slope}` | Designed ground: terraces stepping **along x** at `x_w*`. |
 | `retaining` | `[{x, name}]` | Stone retaining walls on the x-lines, clipped to the plot. |
 | `garden_steps` | `[{x, z0, z1}]` | Outdoor steps across a retaining wall. |

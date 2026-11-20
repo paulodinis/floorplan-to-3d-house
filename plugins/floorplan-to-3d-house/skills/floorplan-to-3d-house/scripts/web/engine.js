@@ -1642,6 +1642,55 @@ const roomEls = [];
   }
   roomEls.sort((p, q) => q.a - p.a);                                   // big rooms keep their label when labels collide
 }
+// room dimensions ("Areas" layer): wall-to-wall lines across and along each room, with their length, like a plan
+// dimension: measured on the room polygon (inside faces), along x at 30 % of the depth and along z at 30 % of the width, 2,3 m above the floor
+const dimGroup = new THREE.Group(); dimGroup.name = 'Room_Dimensions'; dimGroup.visible = false; scene.add(dimGroup);
+const dimEls = [];
+{
+  const dec = (PROJ.ui && PROJ.ui.decimal) || '.';
+  const dimMat = new THREE.MeshBasicMaterial({ color: 0x1d1c1a, depthTest: true }); dimMat.name = 'Dimension_Line';
+  const tickMat = new THREE.MeshBasicMaterial({ color: 0xc8102e }); tickMat.name = 'Dimension_Tick';
+  // wall-to-wall span of the polygon on a line (axis 'x': z = c; axis 'z': x = c); the inside segment holding `at`, else the longest
+  function span(poly, axis, c, at) {
+    const hits = [];
+    for (let i = 0; i < poly.length; i++) {
+      const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % poly.length];
+      const [pa, qa, pb, qb] = axis === 'x' ? [az, ax, bz, bx] : [ax, az, bx, bz];   // p: coordinate across the line, q: along it
+      if ((pa > c) !== (pb > c)) hits.push(qa + (qb - qa) * (c - pa) / (pb - pa));
+    }
+    hits.sort((u, v) => u - v);
+    let best = null;
+    for (let i = 0; i + 1 < hits.length; i += 2) { const s = [hits[i], hits[i + 1]]; if (at >= s[0] && at <= s[1]) return s; if (!best || s[1] - s[0] > best[1] - best[0]) best = s; }
+    return best;
+  }
+  for (const r of (LAY.rooms || [])) {
+    if (/^(escada|stair)/i.test(r.name)) continue;
+    const p = r.poly, xs = p.map(q => q[0]), zs = p.map(q => q[1]);
+    const X0 = Math.min(...xs), X1 = Math.max(...xs), Z0 = Math.min(...zs), Z1 = Math.max(...zs);
+    const y = (r.level != null ? r.level - FFL : 0) + 2.3, st = r.storey || 0;   // just under the wall tops: reads from above like the room labels
+    for (const axis of ['x', 'z']) {
+      const c = axis === 'x' ? Z0 + Math.min(0.9, (Z1 - Z0) * 0.22) : X0 + Math.min(0.9, (X1 - X0) * 0.22), at = axis === 'x' ? (X0 + X1) / 2 : (Z0 + Z1) / 2;
+      const s_ = span(p, axis, c, at); if (!s_ || s_[1] - s_[0] < 0.6) continue;
+      const [a, b] = s_, L = b - a, g = new THREE.Group(); g.userData.storey = st;
+      const seg = (u0, u1, w = 0.03) => { const geo = axis === 'x' ? new THREE.BoxGeometry(u1 - u0, w, w) : new THREE.BoxGeometry(w, w, u1 - u0);
+        if (axis === 'x') geo.translate((u0 + u1) / 2, y, c); else geo.translate(c, y, (u0 + u1) / 2); return geo; };
+      const line = new THREE.Mesh(seg(a, b), dimMat); line.renderOrder = 3; g.add(line);
+      for (const u of [a, b]) {                                                     // end ticks: short 45° strokes + a stop against the wall
+        const t = new THREE.BoxGeometry(0.035, 0.035, 0.3); t.rotateY(Math.PI / 4 * (axis === 'x' ? 1 : -1));
+        if (axis === 'x') t.translate(u, y, c); else t.translate(c, y, u); g.add(new THREE.Mesh(t, tickMat));
+        const stop = new THREE.BoxGeometry(0.03, 0.25, 0.03);
+        if (axis === 'x') stop.translate(u, y, c); else stop.translate(c, y, u); g.add(new THREE.Mesh(stop, dimMat));
+      }
+      dimGroup.add(g);
+      const el = document.createElement('div'); el.className = 'spot dim'; el.hidden = true; el.style.left = el.style.top = '0';
+      el.textContent = L.toFixed(2).replace('.', dec) + ' m'; labelsEl.appendChild(el);
+      el.hidden = false; const bw = el.offsetWidth || 50, bh = el.offsetHeight || 16; el.hidden = true;
+      const at_ = t => axis === 'x' ? new THREE.Vector3(a + (b - a) * t, y, c) : new THREE.Vector3(c, y, a + (b - a) * t);
+      const spots = [0.5, 0.35, 0.65, 0.22, 0.78].map(at_);                       // label slides along its line to a free spot
+      dimEls.push({ el, st, bw, bh, g, spots, v: () => spots[0] });
+    }
+  }
+}
 let showAreas = false;
 const occRay = new THREE.Raycaster(); let occTick = 0;
 function occluded(pt) {                                               // an opaque wall between the camera and the label (glass doesn't count)
@@ -1668,6 +1717,21 @@ function updateLabels() {
       if (placed.some(q => Math.abs(q[0] - x) < q[2] + bw && Math.abs(q[1] - y) < q[3] + bh)) vis = false;
       else { placed.push([x, y, bw, bh]); o.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`; }
     }
+    o.el.hidden = !vis;
+  }
+  dimGroup.visible = showAreas;
+  for (const o of dimEls) {
+    const onSt = o.st === Math.min(stShown, MAX_STOREY); o.g.visible = onSt;
+    let vis = showAreas && onSt, spot = null;
+    if (vis) for (const v of o.spots) {                                            // first spot along the line that is on screen and free
+      const p = v.clone().project(camera); if (!(p.z < 1 && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05)) continue;
+      const x = (p.x * 0.5 + 0.5) * w, y = (-p.y * 0.5 + 0.5) * h, bw = o.bw / 2 + 1, bh = o.bh / 2 + 1;
+      if (placed.some(q => Math.abs(q[0] - x) < q[2] + bw && Math.abs(q[1] - y) < q[3] + bh)) continue;
+      spot = [x, y, bw, bh, v]; break;
+    }
+    if (spot && (recheck || o.occ === undefined)) o.occ = occluded(spot[4]);
+    vis = !!spot && !o.occ;
+    if (vis) { placed.push(spot.slice(0, 4)); o.el.style.transform = `translate(${spot[0]}px, ${spot[1]}px) translate(-50%, -50%)`; }
     o.el.hidden = !vis;
   }
 }
