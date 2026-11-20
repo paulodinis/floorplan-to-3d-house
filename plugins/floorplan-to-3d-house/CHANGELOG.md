@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.0 (2026-11-20)
+- **Wardrobe items** (procedural): shoes, stiletto heels, ankle boots, tall boots, bathrobes, shirts, jackets, coats, trousers on clip hangers, and a jewellery tray (rings on cones, watch, necklace stand, pearl earrings).
+  - Closets now hang real shirts, jackets and coats on wire hangers instead of boxes, with trousers on the lower rail, a bathrobe, and boots and heels on the shoe shelf.
+  - The shoe rack holds pairs of shoes, heels and ankle boots; the dressing table gets the jewellery tray.
+  - Each item can also be placed on its own by name (see `references/layout-schema.md`).
+  - Every closet, rack and group of items is merged into one mesh per material, so a full closet costs a handful of draw calls.
+
 ## 1.10.1 (2026-11-20)
 - Lighter wicker basket model (22k → 4.9k triangles, 256 px texture): about 0.6 MB less in the plugin and on every published page.
 
