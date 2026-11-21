@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.2 (2026-11-21)
+- **Jump in Walk mode**: `Space` jumps 1.5 m (about 1.1 s in the air), only from the ground, so the walker clears low walls, fences, planters and parapets; house walls stay in the way. Indoors the jump stops under the ceiling (the roof's eave or the slab of the storey above). Shown in the Walk help bar.
+- **Only the warning is red in the panel**: the badge now reads *Indicative proposal — check with your architect* (*Proposta indicativa — confirme com o seu arquiteto*) and is the only red in the controls panel; the active navigation button, the checkboxes, the focus outlines and the Record button use the ink colour. The plot limit, the north arrow and the REC pill keep their red.
+
 ## 1.12.1 (2026-11-21)
 - **Sun dial** replaces the time slider in the 3D page: solar time on an arc from 4:00 (left) to 23:00 (right) over the top, like the sun's path. The stretch between sunrise and sunset is drawn in a warm gradient and the night in blue; sunrise and sunset are marked on the arc (notch + half-sun icon with an arrow) and their times shown below, computed for the chosen date (21 Jun / 21 Mar / 21 Dec) and the site latitude (sun centre 0.833° below the horizon). Drag the sun (a moon at night) along the arc, or use the keyboard (arrows 15 min, Page Up/Down 1 h, Home/End); the centre shows the time and the sun's height. Works with touch; `role="slider"` with a spoken value. English and Portuguese (Portugal). `project.json` `"sun_hour"` is now clamped to 4–23.
 

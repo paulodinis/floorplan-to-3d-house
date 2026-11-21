@@ -36,7 +36,7 @@
   "total": "Total floor area",
   "plot": "Plot",
   "level": "Floor level",
-  "badge": "Indicative proposal",
+  "badge": "Indicative proposal — check with your architect",
   "true_north": "True north",
   "aria_north": "North arrow",
   "h_click": "Click the image to control with the mouse · Esc to release",
@@ -98,7 +98,8 @@
   "sd_alt": "sun at {a}°",
   "sd_below": "sun below the horizon",
   "sd_polar": "no sunrise today",
-  "sd_midsun": "sun all day"
+  "sd_midsun": "sun all day",
+  "h_jump": "jump"
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -137,7 +138,7 @@
   "total": "Área total de construção",
   "plot": "Terreno",
   "level": "Soleira",
-  "badge": "Proposta indicativa",
+  "badge": "Proposta indicativa — confirme com o seu arquiteto",
   "true_north": "Norte verdadeiro",
   "aria_north": "Seta do norte",
   "h_click": "Clique na imagem para controlar com o rato · Esc para largar",
@@ -199,6 +200,7 @@
   "sd_alt": "sol a {a}°",
   "sd_below": "sol abaixo do horizonte",
   "sd_polar": "o sol não nasce",
-  "sd_midsun": "sol todo o dia"
+  "sd_midsun": "sol todo o dia",
+  "h_jump": "saltar"
  }
 }
