@@ -172,6 +172,19 @@ table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px
 }
 #drone-up { bottom: calc(env(safe-area-inset-bottom, 0px) + 230px); }
 #drone-down { bottom: calc(env(safe-area-inset-bottom, 0px) + 160px); }
+/* video path recording */
+.rec { display: grid; gap: 6px; }
+.recrow { display: flex; gap: 4px; }
+.recb { flex: 1; font: 500 12.5px/1 var(--display); letter-spacing: .03em; text-transform: uppercase; background: var(--chip); color: var(--ink); border: 1px solid transparent; padding: 8px 4px; cursor: pointer; border-radius: 2px; }
+#rec-btn[aria-pressed="true"] { background: #c62828; color: #fff; }
+#rec-out { font-size: 12px; }
+.rec-frame { position: fixed; z-index: 2; pointer-events: none; outline: 1px solid rgba(255,255,255,.85); box-shadow: 0 0 0 100vmax rgba(0,0,0,.38); }
+.rec-pill { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); display: flex; align-items: center; gap: 10px;
+  background: rgba(20,20,20,.82); color: #fff; padding: 6px 6px 6px 14px; border-radius: 999px; font: 600 14px/1 var(--mono); }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #e53935; animation: recblink 1s steps(2) infinite; }
+@keyframes recblink { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }
+.rec-pill button { font: 600 13px/1 var(--display); text-transform: uppercase; background: #fff; color: #1d1c1a; border: 0; border-radius: 999px; padding: 8px 12px; cursor: pointer; }
 </style>
 
 <div id="stage"></div>
@@ -216,6 +229,11 @@ table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px
       <button data-nav="orbit" aria-pressed="true">{{orbit}}</button>
       <button data-nav="walk" aria-pressed="false">{{walk}}</button>
       <button data-nav="drone" aria-pressed="false">{{drone}}</button>
+    </div>
+    <div class="rec" id="rec" role="group" aria-label="{{rec_label}}">
+      <div class="recrow"><button class="recb" id="rec-btn" aria-pressed="false">{{rec_start}}</button><button class="recb" id="rec-play" hidden>{{rec_play}}</button></div>
+      <div class="recrow" id="rec-tools" hidden><button class="recb" id="rec-save">{{rec_save}}</button><button class="recb" id="rec-copy">{{rec_copy}}</button><button class="recb" id="rec-clear">{{rec_clear}}</button></div>
+      <output class="note" id="rec-out" aria-live="polite">{{rec_hint}}</output>
     </div>
   </section>
 
@@ -294,10 +312,12 @@ table.legend td.v { text-align: right; font-family: var(--mono); font-size: 12px
 </div>
 <div class="nav-help" id="nav-help" hidden>
   <span class="click-hint">{{h_click}}</span>
-  <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {{h_move}} <kbd>Shift</kbd> {{h_run}}<span class="drone-only" hidden> · <kbd>{{k_space}}</kbd>/<kbd>E</kbd> {{h_up}} <kbd>C</kbd>/<kbd>Q</kbd> {{h_down}}</span></span>
+  <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {{h_move}} <kbd>Shift</kbd> {{h_run}} <kbd>R</kbd> {{h_rec}}<span class="drone-only" hidden> · <kbd>{{k_space}}</kbd>/<kbd>E</kbd> {{h_up}} <kbd>C</kbd>/<kbd>Q</kbd> {{h_down}}</span></span>
   <span class="touch">{{h_touch}}</span>
 </div>
 <div class="crosshair" id="crosshair" hidden></div>
+<div class="rec-frame" id="rec-frame" hidden></div>
+<div class="rec-pill" id="rec-pill" hidden role="status"><span class="rec-dot" aria-hidden="true"></span><span>{{rec_live}}</span><span id="rec-time">0:00</span><button id="rec-stop">{{rec_stop}}</button></div>
 <div class="joy" id="joy" hidden aria-label="{{aria_joy}}"><span id="joy-knob"></span></div>
 <button class="dbtn" id="drone-up" hidden aria-label="{{aria_up}}">▲</button>
 <button class="dbtn" id="drone-down" hidden aria-label="{{aria_down}}">▼</button>
