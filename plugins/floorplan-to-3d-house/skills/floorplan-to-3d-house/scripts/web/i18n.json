@@ -73,7 +73,23 @@
   "busy_slow": "Slow image on this device ({fps} fps): switching to {q} quality…",
   "err_prefix": "Error",
   "err_resource": "resource did not load",
-  "err_slow": "still loading after 25 s"
+  "err_slow": "still loading after 25 s",
+  "rec_label": "Video path",
+  "rec_start": "● Record path",
+  "rec_stop": "■ Stop",
+  "rec_play": "▶ Play",
+  "rec_save": "Download",
+  "rec_copy": "Copy",
+  "rec_clear": "Delete",
+  "rec_hint": "Fly (Drone) or walk (Walk); press R or the button to start and stop. The frame shows what the video will show.",
+  "rec_info": "Recorded: {s} s · {n} points",
+  "rec_saved": "Saved {f}: send it to Claude to make the video.",
+  "rec_copied": "Copied: paste it into the conversation with Claude.",
+  "rec_copy_fail": "Could not copy here: use Download.",
+  "rec_too_short": "Too short (under 2 s): record again.",
+  "rec_playing": "Playing the path… (Esc stops)",
+  "h_rec": "record",
+  "rec_live": "REC"
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -149,6 +165,22 @@
   "busy_slow": "Imagem lenta neste aparelho ({fps} fps): a passar para a qualidade {q}…",
   "err_prefix": "Erro",
   "err_resource": "recurso não carregou",
-  "err_slow": "ainda a carregar após 25 s"
+  "err_slow": "ainda a carregar após 25 s",
+  "rec_label": "Percurso do vídeo",
+  "rec_start": "● Gravar percurso",
+  "rec_stop": "■ Parar",
+  "rec_play": "▶ Rever",
+  "rec_save": "Descarregar",
+  "rec_copy": "Copiar",
+  "rec_clear": "Apagar",
+  "rec_hint": "Voe (Drone) ou caminhe (Passeio); carregue em R ou no botão para começar e parar. A moldura mostra o que o vídeo vai mostrar.",
+  "rec_info": "Gravado: {s} s · {n} pontos",
+  "rec_saved": "Guardado {f}: envie-o ao Claude para fazer o vídeo.",
+  "rec_copied": "Copiado: cole-o na conversa com o Claude.",
+  "rec_copy_fail": "Não foi possível copiar aqui: use Descarregar.",
+  "rec_too_short": "Demasiado curto (menos de 2 s): grave de novo.",
+  "rec_playing": "A rever o percurso… (Esc para parar)",
+  "h_rec": "gravar",
+  "rec_live": "REC"
  }
 }

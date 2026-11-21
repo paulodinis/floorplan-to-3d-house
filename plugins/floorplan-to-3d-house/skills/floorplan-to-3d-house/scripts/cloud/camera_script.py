@@ -28,6 +28,13 @@ Steps (heading in degrees: 0 = east, 90 = south; "pivot" > 0 turns right):
   strafe     {"to": point, "via": [points], "look": point}  walk sideways, eyes on a point
   aerial     {"height": 40}    pull up and away until the whole house is seen from above
   hold       stay
+  track      {"file": "export/recording.json"}  a camera path recorded in the 3D page (Record path button):
+             the camera follows it at the recorded timing. Options: "smooth" (s, default 0.5: moving average
+             over that window, removes keyboard and mouse jitter), "speed" (default 1; 0.5 = half speed),
+             "trim": [from_s, to_s] (keep part of it), "t" (seconds; default = recorded length / speed).
+             "keys": [[t, ex, ey, ez, tx, ty, tz], ...] instead of "file". Doors the camera crosses at walking
+             height open by themselves; glass, walls and eyes too close to a wall are listed in `checks`.
+When a script has a "track" step and no "seconds", "t" values are seconds and the video lasts their sum.
 """
 import json, math, sys, argparse
 ap = argparse.ArgumentParser()
@@ -37,7 +44,46 @@ ap.add_argument('--eye', type=float, default=1.6, help='eye height above the flo
 ap.add_argument('--linear', action='store_true', help='constant speed inside every step (no ease-in/out): set each step t from its length / speed')
 A = ap.parse_args(); LINEAR = A.linear
 L = json.load(open(A.layout, encoding='utf-8')); SC = json.load(open(A.script, encoding='utf-8'))
-FPS = int(SC.get('fps', 25)); SEC = float(SC.get('seconds', 60)); F = int(round(SEC * FPS))
+FPS = int(SC.get('fps', 25))
+
+# ---------- recorded tracks (3D page "Record path" button) ----------
+import os, bisect
+def load_track(s):
+    if 'keys' in s: R = s['keys']
+    else:
+        f = s['file']
+        cand = [f, os.path.join(os.path.dirname(os.path.abspath(A.script)), f), os.path.join(os.path.dirname(os.path.abspath(A.script)), os.path.basename(f))]
+        f = next((c for c in cand if os.path.exists(c)), None)
+        if not f: sys.exit(f"track: recording not found: {s['file']!r}")
+        R = json.load(open(f, encoding='utf-8'))
+    if isinstance(R, dict):
+        if R.get('kind') not in (None, 'fp3d-camera-recording'): sys.exit(f"track: not a camera recording (kind {R.get('kind')!r})")
+        R = R.get('samples') or []
+    S_ = sorted((float(r[0]), tuple(map(float, r[1:4])), tuple(map(float, r[4:7]))) for r in R if len(r) >= 7)
+    if 'trim' in s:
+        a, b = s['trim']; S_ = [r for r in S_ if a <= r[0] - S_[0][0] <= b] if S_ else S_
+    if len(S_) < 2: sys.exit('track: the recording has fewer than 2 samples')
+    t0 = S_[0][0]; ts, E, Tg = [], [], []
+    for t, e, g in S_:
+        if ts and t - t0 <= ts[-1] + 1e-4: continue          # duplicate times
+        ts.append(t - t0); E.append(e); Tg.append(g)
+    w = float(s.get('smooth', 0.5)) / 2
+    if w > 0:                                                 # time-window moving average (eye and look point separately)
+        def sm(arr):
+            out, lo, hi = [], 0, 0
+            for i, t in enumerate(ts):
+                while ts[lo] < t - w: lo += 1
+                while hi + 1 < len(ts) and ts[hi + 1] <= t + w: hi += 1
+                n = hi - lo + 1; out.append(tuple(sum(arr[j][k] for j in range(lo, hi + 1)) / n for k in range(3)))
+            out[0], out[-1] = arr[0], arr[-1]                   # keep the exact start and end
+            return out
+        E, Tg = sm(E), sm(Tg)
+    return dict(ts=ts, E=E, T=Tg, dur=ts[-1] / float(s.get('speed', 1.0)))
+TRK = {}
+for s_ in SC['steps']:
+    if s_.get('do') == 'track':
+        TRK[id(s_)] = load_track(s_); s_.setdefault('t', TRK[id(s_)]['dur'])
+SEC = float(SC.get('seconds', sum(s_.get('t', 1.0) for s_ in SC['steps']) if TRK else 60)); F = int(round(SEC * FPS))
 EYE, LOOKD = A.eye, 0.25                    # eye above the floor; look slightly down (m per m)
 
 # ---------- geometry ----------
@@ -318,6 +364,33 @@ for s in steps:
             return (e[0] + math.cos(r) * dd, (e[1] - LOOKD * 3.0) * (1 - w) + ly * w, e[2] + math.sin(r) * dd)
         segs.append((dur, ep, stg))
         st.update(p=pts[-1], h=heading(pts[-1], lk))
+    elif do == 'track':
+        tr = TRK[id(s)]; ts, E_, T_ = tr['ts'], tr['E'], tr['T']; tN = ts[-1] or 1e-9
+        def ip(arr, u, ts=ts, tN=tN):
+            tt = max(0.0, min(1.0, u)) * tN; i = max(1, min(len(ts) - 1, bisect.bisect_left(ts, tt)))
+            v = (tt - ts[i - 1]) / ((ts[i] - ts[i - 1]) or 1e-9); return lerp(arr[i - 1], arr[i], max(0.0, min(1.0, v)))
+        segs.append((dur, lambda u, ip=ip, E_=E_: ip(E_, u), lambda u, ip=ip, T_=T_: ip(T_, u)))
+        # doors, glass and walls crossed at walking height (a drone flying over the roof crosses nothing)
+        for i in range(len(ts) - 1):
+            p, q = (E_[i][0], E_[i][2]), (E_[i + 1][0], E_[i + 1][2])
+            if math.dist(p, q) < 1e-4: continue
+            fy = floor_y(p); fy = floor_y(q) if fy is None else fy; fy = 0.0 if fy is None else fy
+            ey = min(E_[i][1], E_[i + 1][1])
+            for op in OPS:
+                v = cross(p, q, op['a'], op['b'])
+                if v is None or ey - op['y0'] > 2.4: continue
+                u_t = (ts[i] + v * (ts[i + 1] - ts[i])) / tN
+                if op['kind'] in ('door', 'front'):
+                    dst = room_at(q) or room_at(lerp(p, q, min(1, v + 0.3)))
+                    tow = side(op, dst, 2.0) if dst in op['r'] else q
+                    doors.append((len(segs) - 1, u_t, op, tow))
+                elif op['kind'] in ('slide', 'door_glass', 'window'):
+                    checks.append(f"step {len(labels)}: passes through glass at {ts[i] / tN * dur:.1f} s ({op['kind']} {op['w']} m at x {op['c'][0]:.1f}, z {op['c'][1]:.1f})")
+            if ey - fy < 2.6:
+                for (wa, wb, t) in WALLS:
+                    if cross(p, q, wa, wb) is not None and min(seg_d(p, wa, wb), seg_d(q, wa, wb)) > 0.01:
+                        checks.append(f"step {len(labels)}: crosses a wall at {ts[i] / tN * dur:.1f} s near x {(wa[0] + wb[0]) / 2:.1f}, z {(wa[1] + wb[1]) / 2:.1f}")
+        e, g = E_[-1], T_[-1]; st.update(p=(e[0], e[2]), y=e[1], h=heading((e[0], e[2]), (g[0], g[2])) if math.dist((e[0], e[2]), (g[0], g[2])) > 1e-3 else st['h'])
     elif do == 'aerial':
         e0 = (st['p'][0], st['y'], st['p'][1]); t0 = look_at(e0, st['h'])
         hgt = s.get('height', max(30.0, HR * 2.2)); dx, dz = st['p'][0] - HC[0], st['p'][1] - HC[1]; dd = math.hypot(dx, dz) or 1
@@ -343,7 +416,7 @@ for f in list(range(1, F + 1, 3)) + ([F] if (F - 1) % 3 else []):
 # eye too close to a wall (not while passing through an opening)
 for f, e, _ in keys[::2]:
     p = (e[0], e[2])
-    if floor_y(p) is None: continue
+    if floor_y(p) is None or e[1] - floor_y(p) > 2.6: continue     # above the storey (drone over the roof)
     dmin = min((seg_d(p, a, b) - t / 2 for a, b, t in WALLS), default=9)
     near_op = any(seg_d(p, o['a'], o['b']) < 0.7 for o in OPS)
     if dmin < 0.2 and not near_op: checks.append(f'frame {f}: eye {dmin:.2f} m from a wall at x {p[0]:.1f}, z {p[1]:.1f}')
@@ -356,7 +429,7 @@ STOPS = []
 for si, lab in labels:
     if si >= len(segs): continue
     e, _ = sample(starts[si] + segs[si][0]); STOPS.append(dict(n=len(STOPS) + 1, label=lab, frame=int(starts[si] * FPS) + 1, pos=[round(e[0], 2), round(e[2], 2)]))   # marker where the step ends
-out = dict(camera_keys=keys, frames_src=F, frames_out=F, doors=DOORS, stops=STOPS, checks=checks, mode='script', seconds=SEC)
+out = dict(camera_keys=keys, frames_src=F, frames_out=F, doors=DOORS, stops=STOPS, checks=checks, mode='record' if TRK and len(TRK) == len(SC['steps']) else 'script', seconds=SEC)
 json.dump(out, open(A.out, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
 print(json.dumps(dict(frames=F, keys=len(keys), doors=len(DOORS), stops=[f"{s['n']} {s['label']} ({s['frame'] / FPS:.1f} s)" for s in STOPS], checks=checks), ensure_ascii=False))
 
@@ -389,7 +462,9 @@ if A.preview:
         d.rectangle([0, 0, w - 1, h - 1], outline=(200, 200, 200)); im.paste(sub, (x0, y0))
     d = ImageDraw.Draw(im)
     pt_ = A.lang.startswith('pt')
-    d.text((10, 12), (f'Percurso por guião — {SEC:.0f} s · {F} imagens' if pt_ else f'Scripted path — {SEC:.0f} s · {F} frames'), fill='black', font=fnt(22))
+    rec = bool(TRK) and len(TRK) == len(SC['steps'])
+    ttl = ('Percurso gravado' if rec else 'Percurso por guião') if pt_ else ('Recorded path' if rec else 'Scripted path')
+    d.text((10, 12), (f'{ttl} — {SEC:.0f} s · {F} imagens' if pt_ else f'{ttl} — {SEC:.0f} s · {F} frames'), fill='black', font=fnt(22))
     y = 705
     for s_ in STOPS:
         d.text((10 + (s_['n'] - 1) // 12 * 560, y + ((s_['n'] - 1) % 12) * 22), f"{s_['n']}  {s_['label']}  ({s_['frame'] / FPS:.1f} s)", fill='black', font=fnt(15))

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.0 (2026-11-21)
+- **Record the video path in the 3D page**: **● Record path** in the navigation section (or the `R` key) records the camera while the user flies (Drone) or walks (Walk). During the recording the view uses the video framing: a 16:9 frame and the field of view of the Blender camera (22 mm), so what the user sees is what the video shows; a red REC pill shows the time and a Stop button. **▶ Play** replays the path, **Download** saves `camera_recording_<date>.json`, **Copy** puts it on the clipboard. The last recording is kept in the browser. English and Portuguese (Portugal).
+- **`camera_script.py` `track` step**: turns a recording into Blender camera keys at the recorded timing, with `smooth` (moving average, default 0.5 s), `speed` and `trim`. It can be mixed with scripted steps (`orbit`, `aerial`, `hold` …). Doors crossed at walking height open by themselves; glass, walls crossed and eyes too close to a wall are listed in `checks` with the time; nothing is checked above the storey (a drone over the roof). The preview is titled *Recorded path*.
+- **Fix:** the "eye too close to a wall" check no longer fires for scripted aerial shots high above the house.
+- **`drone-video` skill**: new path choice *Record it myself in the 3D page*, with how to get the file (Downloads or pasted JSON) and the options to calm a fast flight.
+
 ## 1.11.0 (2026-11-20)
 - **Wardrobe items** (procedural): shoes, stiletto heels, ankle boots, tall boots, bathrobes, shirts, jackets, coats, trousers on clip hangers, and a jewellery tray (rings on cones, watch, necklace stand, pearl earrings).
   - Closets now hang real shirts, jackets and coats on wire hangers instead of boxes, with trousers on the lower rail, a bathrobe, and boots and heels on the shoe shelf.

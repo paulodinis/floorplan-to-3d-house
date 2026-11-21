@@ -2321,6 +2321,100 @@ document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', (
 window.__quality = { Q, setQuality, buildPipe };
 renderer.backend?.device?.addEventListener?.('uncapturederror', e => console.error('WebGPU:', e.error && e.error.message));
 
+// ---------- video path recording: the camera path for the Blender video (drone-video skill, camera_script.py "track" step) ----------
+// While recording, the view uses the video framing: 22 mm lens on a 36 mm sensor (Blender DroneCam) in a 16:9 frame.
+const REC_VFOV = 2 * Math.atan(Math.tan(Math.atan(18 / 22)) / (16 / 9)) * 180 / Math.PI;   // 49.4° vertical at 16:9
+const REC_RATE = 10, REC_KEY = 'fp3d.rec';
+const REC = { on: false, t: 0, next: 0, samples: [], play: null, fov0: camera.fov, mode: null };
+const recBtn = document.getElementById('rec-btn'), recPlayB = document.getElementById('rec-play'), recTools = document.getElementById('rec-tools');
+const recOut = document.getElementById('rec-out'), recFrame = document.getElementById('rec-frame'), recPill = document.getElementById('rec-pill'), recTime = document.getElementById('rec-time');
+const recFmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+const recSay = (k, v = {}) => { recOut.textContent = Object.entries(v).reduce((a, [x, y]) => a.replace(`{${x}}`, y), T[k] || ''); };
+function recInfo() { const n = REC.samples.length, d = n ? REC.samples[n - 1][0] : 0; recSay('rec_info', { s: d.toFixed(1).replace('.', T.decimal || '.'), n }); }
+function recFraming(on) {                       // video framing (16:9 frame + Blender field of view) or back to the normal view
+  recFrame.hidden = !on;
+  if (!on) { camera.fov = REC.fov0; camera.updateProjectionMatrix(); return; }
+  const r = stage.getBoundingClientRect(), a = 16 / 9;
+  let fw = r.width, fh = r.width / a; if (fh > r.height) { fh = r.height; fw = fh * a; }
+  Object.assign(recFrame.style, { left: `${r.left + (r.width - fw) / 2}px`, top: `${r.top + (r.height - fh) / 2}px`, width: `${fw}px`, height: `${fh}px` });
+  camera.fov = 2 * Math.atan(Math.tan(REC_VFOV * Math.PI / 360) * r.height / fh) * 180 / Math.PI; camera.updateProjectionMatrix();
+}
+function recUI() {
+  const has = REC.samples.length > 1, busyRec = REC.on || !!REC.play;
+  recBtn.setAttribute('aria-pressed', String(REC.on)); recBtn.textContent = REC.on ? T.rec_stop : T.rec_start;
+  recPlayB.hidden = !has || REC.on; recPlayB.textContent = REC.play ? T.rec_stop : T.rec_play;
+  recTools.hidden = !has || busyRec; recPill.hidden = !REC.on;
+}
+function recStart() {
+  if (REC.play) recPlayStop();
+  REC.on = true; REC.t = 0; REC.next = 0; REC.samples = []; REC.mode = NAV.mode; anim = null;
+  recFraming(true); recTime.textContent = '0:00'; recSay('rec_hint'); recUI();
+}
+function recStopRec() {
+  REC.on = false; recFraming(false);
+  if (REC.samples.length < 2 || REC.samples[REC.samples.length - 1][0] < 2) { REC.samples = []; recSay('rec_too_short'); }
+  else { try { localStorage.setItem(REC_KEY, JSON.stringify(REC.samples)); } catch (e) {} recInfo(); }
+  recUI();
+}
+function recTick(dt) {                          // after the camera moved this frame; dt is capped (a hidden tab adds no time)
+  if (!REC.on) return;
+  REC.t += dt; recTime.textContent = recFmt(REC.t);
+  if (REC.t + 1e-6 < REC.next) return;
+  REC.next = REC.t + 1 / REC_RATE;
+  const d = new THREE.Vector3(); camera.getWorldDirection(d); const p = camera.position, r3 = v => Math.round(v * 1000) / 1000;
+  REC.samples.push([Math.round(REC.t * 100) / 100, r3(p.x), r3(p.y), r3(p.z), r3(p.x + d.x * 3), r3(p.y + d.y * 3), r3(p.z + d.z * 3)]);
+}
+function recPlayStart() {
+  if (REC.samples.length < 2 || REC.on) return;
+  REC.play = { t: 0 }; anim = null; recFraming(true); recSay('rec_playing'); recUI();
+}
+const _ra = new THREE.Vector3(), _rb = new THREE.Vector3();
+function recPlayTick(dt) {
+  const S = REC.samples, P = REC.play; P.t += dt;
+  const T_ = Math.min(P.t, S[S.length - 1][0]); let i = 1; while (i < S.length - 1 && S[i][0] < T_) i++;
+  const a = S[i - 1], b = S[i], u = Math.max(0, Math.min(1, (T_ - a[0]) / ((b[0] - a[0]) || 1)));
+  camera.position.set(a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u);
+  _ra.set(a[4], a[5], a[6]); _rb.set(b[4], b[5], b[6]); camera.lookAt(_ra.lerp(_rb, u));
+  if (P.t >= S[S.length - 1][0]) recPlayStop();
+}
+function recPlayStop() {
+  if (!REC.play) return;
+  REC.play = null; recFraming(false);
+  if (NAV.mode === 'orbit') { const d = new THREE.Vector3(); camera.getWorldDirection(d); controls.target.copy(camera.position).addScaledVector(d, 12); controls.update(); }
+  else setLookFromCamera();
+  recInfo(); recUI();
+}
+function recJSON() {
+  const S = REC.samples;
+  return JSON.stringify({ kind: 'fp3d-camera-recording', version: 1, project: PROJ.title || document.title, created: new Date().toISOString(),
+    units: 'scene metres: x east, y up, z south; t seconds; target = 3 m ahead', fov_v: Math.round(REC_VFOV * 10) / 10, aspect: '16:9', lens_mm: 22,
+    rate: REC_RATE, duration: S.length ? S[S.length - 1][0] : 0, samples: S });
+}
+recBtn.addEventListener('click', () => (REC.on ? recStopRec() : recStart()));
+document.getElementById('rec-stop').addEventListener('click', recStopRec);
+recPlayB.addEventListener('click', () => (REC.play ? recPlayStop() : recPlayStart()));
+document.getElementById('rec-save').addEventListener('click', () => {
+  const f = `camera_recording_${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '_')}.json`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([recJSON()], { type: 'application/json' })); a.download = f;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); recSay('rec_saved', { f });
+});
+document.getElementById('rec-copy').addEventListener('click', async () => {
+  const txt = recJSON();
+  try { await navigator.clipboard.writeText(txt); recSay('rec_copied'); return; } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove(); recSay(ok ? 'rec_copied' : 'rec_copy_fail'); } catch (e) { recSay('rec_copy_fail'); }
+});
+document.getElementById('rec-clear').addEventListener('click', () => { REC.samples = []; try { localStorage.removeItem(REC_KEY); } catch (e) {} recSay('rec_hint'); recUI(); });
+addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea, select')) return;
+  if (e.code === 'KeyR' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); REC.on ? recStopRec() : recStart(); }
+  else if (e.code === 'Escape' && REC.play) recPlayStop();
+});
+addEventListener('resize', () => { if (REC.on || REC.play) recFraming(true); });
+try { const s0 = JSON.parse(localStorage.getItem(REC_KEY) || 'null'); if (Array.isArray(s0) && s0.length > 1) { REC.samples = s0; recInfo(); } } catch (e) {}
+recUI();
+window.__rec = { REC, recStart, recStopRec, recPlayStart, recPlayStop, recJSON };
+
 // ---------- loop ----------
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -2330,12 +2424,13 @@ renderer.domElement.addEventListener('pointerdown', () => { document.getElementB
 let lastT = performance.now();
 renderer.setAnimationLoop(now => {
   const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
-  if (NAV.mode !== 'orbit') { navUpdate(dt); draw(now); updateLabels(); updateCompass(); return; }
+  if (REC.play) { recPlayTick(dt); draw(now); updateLabels(); updateCompass(); return; }
+  if (NAV.mode !== 'orbit') { navUpdate(dt); recTick(dt); draw(now); updateLabels(); updateCompass(); return; }
   if (anim) {
     const t = Math.min(1, (now - anim.t0) / anim.dur), e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     camera.position.lerpVectors(anim.fromP, anim.toP, e); controls.target.lerpVectors(anim.fromT, anim.toT, e);
     if (t >= 1) anim = null;
   }
-  controls.update(); draw(now); updateLabels(); updateCompass();
+  controls.update(); recTick(dt); draw(now); updateLabels(); updateCompass();
 });
 window.__ready = true;

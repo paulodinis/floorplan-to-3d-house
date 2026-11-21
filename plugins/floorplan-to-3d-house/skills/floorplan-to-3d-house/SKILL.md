@@ -8,7 +8,7 @@ description: >
   GLB/3D-DXF exports and reference renders, elevations and section, a sun & daylight report, opens the model in Blender, optional Blender video.
   Supports two-storey houses and style presets from reference photos.
 metadata:
-  version: "1.11.0"
+  version: "1.12.0"
 ---
 
 # Floor plan → 2D plan (approval) → 3D model → Blender → video
@@ -61,7 +61,7 @@ Ask: **"Open the 3D model in Blender on your computer?"** — "Yes (Recommended)
 Open it with `scripts/blender/open_in_blender.py` through the Blender MCP when connected (fallbacks and MCP troubleshooting: `references/blender-pipeline.md`). Read `<name>_blender_open.json`; tell the user where the `.blend` is.
 
 ## Step 8. Video (only if the user asks)
-Use the `drone-video` skill. It covers length and resolution, the automatic tour (`camera_path.py`) or the user's own shot list (`camera_script.py`), the path approval stop, test frames and the launch through `pipeline.py`.
+Use the `drone-video` skill. It covers length and resolution, the automatic tour (`camera_path.py`), a path the user records in the 3D page (**● Record path** / `R`, then `camera_script.py` `track` step) or the user's own shot list (`camera_script.py`), the path approval stop, test frames and the launch through `pipeline.py`.
 
 ## Closing summary (fixed block, ≤ 6 lines)
 - **Done:** one line.

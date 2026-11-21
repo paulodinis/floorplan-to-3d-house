@@ -126,6 +126,13 @@ Lessons from that video:
 - Go round columns with a `via` point.
 - Look back at the house after stepping outside, not at the lawn.
 
+## A path recorded in the 3D page (1.12.0)
+- **Page:** navigation section, **● Record path** or `R` (any mode; Drone and Walk are the useful ones). While recording: red REC pill with the time and a Stop button, a 16:9 frame (outside dimmed), and the field of view of the Blender camera (22 mm on 36 mm = 49.4° vertical at 16:9; the page normally uses 42°). **▶ Play** replays it in the same framing (`Esc` stops). **Download** / **Copy** give the JSON; the last recording is kept in the browser (`localStorage` `fp3d.rec`). Recordings under 2 s are dropped. Not shown in `--export` renders.
+- **File:** `{"kind": "fp3d-camera-recording", "version": 1, "rate": 10, "duration": s, "fov_v": 49.4, "lens_mm": 22, "samples": [[t, ex, ey, ez, tx, ty, tz], ...]}`: 10 samples a second, scene metres (x east, y up, z south, the layout's axes), target 3 m ahead of the eye. Recorded time follows the page's frame time capped at 0.1 s, so a hidden tab or a stall adds no time and playback matches how fast the camera moved.
+- **Path:** `camera_script.py` step `{"do": "track", "file": "recording.json"}` (path relative to `path.json`, or `"keys": [...]`). The camera follows the samples at the recorded timing (linear between samples; no ease). `"smooth"` = moving-average window in seconds (default 0.5; the exact first and last samples are kept), `"speed"`, `"trim"`, `"t"`. With a track and no `"seconds"`, `t` values are seconds and the video lasts their sum; scripted steps after a track start from where it ends.
+- **Doors and checks:** doors (`door`, `front`) crossed with the eye under 2.4 m above the opening open by themselves like in scripted paths; glass crossed (the page lets the walker through sliding and glass doors), walls crossed and eyes closer than 0.2 m to a wall are listed in `checks` with the time. Anything more than 2.6 m above the storey floor (a drone over the roof) is not checked.
+- **Framing:** keep `lens.py` off for a recorded path, or the video won't match what the user framed (the recording assumes the 22 mm DroneCam).
+
 ## Blender MCP (troubleshooting)
 - Live session: "Cannot connect to Blender at localhost:9876". Blender is closed, or its MCP add-on server isn't started. Ask the user to open Blender and start the add-on server.
 - Background mode (`execute_blender_code_for_cli`) needs `BLENDER_PATH` in the MCP's settings. `pipeline.py` doesn't need it: it takes the executable from `bpy.app.binary_path` of the live session.
