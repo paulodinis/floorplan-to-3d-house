@@ -2093,7 +2093,7 @@ function updateCompass() {
 
 
 // =================== free navigation: walk (eye level, collisions) and drone ===================
-const NAV = { mode: 'orbit', yaw: 0, pitch: 0, keys: new Set(), joy: { x: 0, y: 0 }, lookTouch: null, vy: 0, upDown: 0 };
+const NAV = { mode: 'orbit', yaw: 0, pitch: 0, keys: new Set(), joy: { x: 0, y: 0 }, lookTouch: null, vy: 0, upDown: 0, jump: false };
 const EYE = 1.65, RADIUS = 0.28;
 // ---- obstacles: 2D segments with half-thickness and a vertical range ----
 const OBST = [];
@@ -2174,6 +2174,14 @@ function floorAt(x, z, feet) {
   const g = heightAt(x, z);
   return Math.max(best, g);
 }
+// lowest ceiling over a point above the feet: a roof's eave (its ceiling) or the slab of the storey above
+function ceilingAt(x, z, feet) {
+  let c = Infinity;
+  for (const r of LAY.roofs) if (r.eave > feet + 1 && x >= r.rect[0] && x <= r.rect[2] && z >= r.rect[1] && z <= r.rect[3]) c = Math.min(c, r.eave);
+  for (const f of LAY.floors) if (f.y > feet + 1 && inPolyXZ(x, z, f.poly)) c = Math.min(c, f.y);
+  return c;
+}
+const JUMP_V = Math.sqrt(2 * 9.8 * 1.5);                       // 5.4 m/s: the feet rise 1.5 m, about 1.1 s in the air
 function collide(p, feet, head, list = OBST) {
   for (let it = 0; it < 3; it++) {
     for (const o of list) {
@@ -2210,6 +2218,7 @@ function setNav(mode) {
   joyEl.hidden = !(free && coarse); dUp.hidden = dDn.hidden = !(mode === 'drone' && coarse);
   document.getElementById('hint').hidden = true;
   navHelp.querySelector('.drone-only').hidden = mode !== 'drone';
+  navHelp.querySelector('.walk-only').hidden = mode !== 'walk';
   if (free && !panel.classList.contains('collapsed')) { panel.classList.add('collapsed'); tp.textContent = T.show; tp.setAttribute('aria-expanded', 'false'); }
   if (mode === 'walk') {
     const [x, z] = PROJ.walk_spawn ?? [-17.2, -3.0];   // where Walk mode starts (scene metres, usually on the street at the gate)
@@ -2231,6 +2240,7 @@ document.querySelectorAll('button.view[data-view]').forEach(b => b.addEventListe
 addEventListener('keydown', e => {
   if (NAV.mode === 'orbit' || e.target.closest('input, button, select, textarea')) return;
   NAV.keys.add(e.code);
+  if (e.code === 'Space' && NAV.mode === 'walk' && !e.repeat) NAV.jump = true;
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
 addEventListener('keyup', e => NAV.keys.delete(e.code));
@@ -2293,8 +2303,14 @@ function navUpdate(dt) {
     if (target - feet > 0.45) { q.x = p.x; q.z = p.z; }       // too high to step up (e.g. retaining wall top)
     p.x = q.x; p.z = q.z;
     const tgt = floorAt(p.x, p.z, feet) + EYE;
-    if (tgt > p.y) p.y += (tgt - p.y) * Math.min(1, dt * 12);  // climb steps smoothly
+    if (NAV.jump) {                                            // Space: jump 1.5 m (clears low walls, fences, planters), only from the ground
+      NAV.jump = false;
+      if (NAV.vy === 0 && p.y <= tgt + 0.03) NAV.vy = JUMP_V;
+    }
+    if (NAV.vy === 0 && tgt > p.y) p.y += (tgt - p.y) * Math.min(1, dt * 12);  // climb steps smoothly
     else { NAV.vy -= 9.8 * dt; p.y = Math.max(tgt, p.y + NAV.vy * dt); if (p.y === tgt) NAV.vy = 0; }
+    const top = ceilingAt(p.x, p.z, feet) - 0.15;              // indoors the head stops at the ceiling
+    if (p.y > top) { p.y = Math.max(tgt, top); if (NAV.vy > 0) NAV.vy = 0; }
     // keep the walker on the site
     p.x = Math.max(G.x0 + 1, Math.min(G.x1 - 1, p.x)); p.z = Math.max(G.z0 + 1, Math.min(G.z1 - 1, p.z));
   } else {
@@ -2311,7 +2327,7 @@ function navUpdate(dt) {
   applyLook();
 }
 const TXL = G.x0 - 40, TXH = G.x1 + 40, TZL = G.z0 - 40, TZH = G.z1 + 40;
-window.__nav = { setNav, NAV, navUpdate, floorAt, camera };
+window.__nav = { setNav, NAV, navUpdate, floorAt, camera, OBST, ceilingAt };
 
 // ---------- quality: Alta = SSGI (indirect light + AO) + TRAA, Média = GTAO + TRAA, Leve = forward + MSAA ----------
 const QK = 'fp3d.quality';
