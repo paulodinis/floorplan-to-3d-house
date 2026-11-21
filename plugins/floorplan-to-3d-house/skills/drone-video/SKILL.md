@@ -6,7 +6,7 @@ description: >
   "I recorded the drone path", "re-render the video" or types /drone-video
   for a project whose 2D plan was already approved in floorplan-to-3d-house and whose GLB exists.
 metadata:
-  version: "1.12.0"
+  version: "1.12.1"
 ---
 
 # Blender drone / walkthrough video for an approved house model
