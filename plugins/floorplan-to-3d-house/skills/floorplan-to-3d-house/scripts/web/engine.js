@@ -2044,6 +2044,21 @@ for (const w of LAY.walls) {
   }
   span(cur, L_, w.y0, w.y0 + w.h);
 }
+// the drone flies through everything but walls: only the solid parts of walls block it (every opening is passable:
+// doors and sliders up to the head, windows between sill and head; furniture, columns, railings, fences and roofs don't block)
+const DRONE_OBST = [];
+for (const w of LAY.walls) {
+  const [ax, az] = w.a, [bx, bz] = w.b, L_ = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L_, uz = (bz - az) / L_;
+  const seg = (s, e, y0, y1) => { if (e - s > 0.01 && y1 - y0 > 0.01) DRONE_OBST.push({ ax: ax + ux * s, az: az + uz * s, bx: ax + ux * e, bz: az + uz * e, half: w.t / 2, y0, y1 }); };
+  let cur = 0;
+  for (const o of [...w.ops].sort((a, b) => a.o - b.o)) {
+    seg(cur, o.o, w.y0, w.y0 + w.h);
+    if (o.sill > 0) seg(o.o, o.o + o.w, w.y0, w.y0 + o.sill);
+    seg(o.o, o.o + o.w, w.y0 + (o.head ?? w.h), w.y0 + w.h);
+    cur = o.o + o.w;
+  }
+  seg(cur, L_, w.y0, w.y0 + w.h);
+}
 for (const c of LAY.columns) addSeg(c.x - 0.01, c.z, c.x + 0.01, c.z, c.s / 2, c.y0, c.y0 + c.h);
 for (const f of LAY.furniture) {
   if (f.h < 0.3 || /mesa centro|espreguiçadeira|coffee table|lounger|rug/i.test(f.name)) continue;
@@ -2091,9 +2106,9 @@ function floorAt(x, z, feet) {
   const g = heightAt(x, z);
   return Math.max(best, g);
 }
-function collide(p, feet, head) {
+function collide(p, feet, head, list = OBST) {
   for (let it = 0; it < 3; it++) {
-    for (const o of OBST) {
+    for (const o of list) {
       if (o.y1 <= feet + 0.25 || o.y0 >= head) continue;        // below a step-over height or above the head
       const dx = o.bx - o.ax, dz = o.bz - o.az, L2 = dx * dx + dz * dz;
       const t = L2 > 0 ? Math.max(0, Math.min(1, ((p.x - o.ax) * dx + (p.z - o.az) * dz) / L2)) : 0;
@@ -2221,7 +2236,7 @@ function navUpdate(dt) {
     const up = (k.has('Space') || k.has('KeyE') ? 1 : 0) - (k.has('KeyC') || k.has('KeyQ') || k.has('ControlLeft') ? 1 : 0) + NAV.upDown;
     const q = { x: p.x + (v3.x * f + rx * s) * speed * dt, z: p.z + (v3.z * f + rz * s) * speed * dt };
     let ny = p.y + (v3.y * f + up) * speed * dt;
-    collide(q, ny - 0.3, ny + 0.3);
+    collide(q, ny - 0.3, ny + 0.3, DRONE_OBST);
     ny = Math.max(heightAt(q.x, q.z) + 0.6, Math.min(80, ny));
     p.set(Math.max(TXL, Math.min(TXH, q.x)), ny, Math.max(TZL, Math.min(TZH, q.z)));
   }
@@ -2322,15 +2337,60 @@ window.__quality = { Q, setQuality, buildPipe };
 renderer.backend?.device?.addEventListener?.('uncapturederror', e => console.error('WebGPU:', e.error && e.error.message));
 
 // ---------- video path recording: the camera path for the Blender video (drone-video skill, camera_script.py "track" step) ----------
-// While recording, the view uses the video framing: 22 mm lens on a 36 mm sensor (Blender DroneCam) in a 16:9 frame.
-const REC_VFOV = 2 * Math.atan(Math.tan(Math.atan(18 / 22)) / (16 / 9)) * 180 / Math.PI;   // 49.4° vertical at 16:9
+// While recording, the view uses the video framing: 16 mm lens on a 36 mm sensor (Blender DroneCam, camera.json lens_mm) in a 16:9 frame.
+const REC_LENS = 16, REC_VFOV = 2 * Math.atan(18 / REC_LENS / (16 / 9)) * 180 / Math.PI;   // 64.6° vertical at 16:9
 const REC_RATE = 10, REC_KEY = 'fp3d.rec';
 const REC = { on: false, t: 0, next: 0, samples: [], play: null, fov0: camera.fov, mode: null };
 const recBtn = document.getElementById('rec-btn'), recPlayB = document.getElementById('rec-play'), recTools = document.getElementById('rec-tools');
 const recOut = document.getElementById('rec-out'), recFrame = document.getElementById('rec-frame'), recPill = document.getElementById('rec-pill'), recTime = document.getElementById('rec-time');
 const recFmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const recSay = (k, v = {}) => { recOut.textContent = Object.entries(v).reduce((a, [x, y]) => a.replace(`{${x}}`, y), T[k] || ''); };
-function recInfo() { const n = REC.samples.length, d = n ? REC.samples[n - 1][0] : 0; recSay('rec_info', { s: d.toFixed(1).replace('.', T.decimal || '.'), n }); }
+// Same processing as camera_script.py process_track (the video): pauses over 1.5 s cut to 0.4 s (start and end to 0.2 s),
+// then Gaussian smoothing of the eye (sigma 0.35 s) and of the look direction (0.5 s), ends held (ease in and out).
+function recProcess(S) {
+  const n0 = S.length; if (n0 < 3) return { P: S, cuts: [] };
+  let ts = S.map(r => r[0] - S[0][0]); const E = S.map(r => [r[1], r[2], r[3]]);
+  const D = S.map(r => { const d = [r[4] - r[1], r[5] - r[2], r[6] - r[3]], l = Math.hypot(...d) || 1; return d.map(c => c / l); });
+  const n = n0, still = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dt = (ts[i + 1] - ts[i]) || 1e-6, dot = Math.max(-1, Math.min(1, D[i][0] * D[i + 1][0] + D[i][1] * D[i + 1][1] + D[i][2] * D[i + 1][2]));
+    still.push(Math.hypot(E[i + 1][0] - E[i][0], E[i + 1][1] - E[i][1], E[i + 1][2] - E[i][2]) / dt < 0.08 && Math.acos(dot) * 180 / Math.PI / dt < 4);
+  }
+  const scale = new Array(n - 1).fill(1), cuts = [];
+  for (let i = 0; i < n - 1;) {
+    if (!still[i]) { i++; continue; }
+    let j = i; while (j < n - 1 && still[j]) j++;
+    const span = ts[j] - ts[i], edge = i === 0 || j === n - 1, lim = edge ? 0.2 : 1.5, kp = edge ? 0.2 : 0.4;
+    if (span > lim) { for (let k = i; k < j; k++) scale[k] = kp / span; cuts.push([ts[i], span - kp]); }
+    i = j;
+  }
+  if (cuts.length) { const nt = [0]; for (let k = 0; k < n - 1; k++) nt.push(nt[k] + (ts[k + 1] - ts[k]) * scale[k]); ts = nt; }
+  const gauss = (arr0, sig, unit) => {
+    const pad = Math.floor(3 * sig / 0.1) + 1, tp = [], arr = [];
+    for (let k = 0; k < pad; k++) { tp.push(ts[0] - 0.1 * (pad - k)); arr.push(arr0[0]); }
+    for (let k = 0; k < n; k++) { tp.push(ts[k]); arr.push(arr0[k]); }
+    for (let k = 0; k < pad; k++) { tp.push(ts[n - 1] + 0.1 * (k + 1)); arr.push(arr0[n - 1]); }
+    const N = tp.length, cov = tp.map((_, j) => Math.max(1e-4, (tp[Math.min(N - 1, j + 1)] - tp[Math.max(0, j - 1)]) / 2)), out = [];
+    let lo = 0, hi = 0;
+    for (let i = pad; i < pad + n; i++) {
+      const t = tp[i]; while (tp[lo] < t - 3 * sig) lo++; while (hi + 1 < N && tp[hi + 1] <= t + 3 * sig) hi++;
+      let W = 0; const v = [0, 0, 0];
+      for (let j = lo; j <= hi; j++) { const w = Math.exp(-0.5 * ((tp[j] - t) / sig) ** 2) * cov[j]; W += w; for (let k = 0; k < 3; k++) v[k] += w * arr[j][k]; }
+      for (let k = 0; k < 3; k++) v[k] /= W;
+      if (unit) { const l = Math.hypot(...v) || 1; for (let k = 0; k < 3; k++) v[k] /= l; }
+      out.push(v);
+    }
+    return out;
+  };
+  const Es = gauss(E, 0.35, false), Ds = gauss(D, 0.5, true);
+  return { P: ts.map((t, i) => [t, ...Es[i], Es[i][0] + Ds[i][0] * 3, Es[i][1] + Ds[i][1] * 3, Es[i][2] + Ds[i][2] * 3]), cuts };
+}
+const recDec = v => v.toFixed(1).replace('.', T.decimal || '.');
+function recInfo() {
+  const n = REC.samples.length; if (n < 2) return;
+  const { P, cuts } = recProcess(REC.samples); REC.proc = P;
+  recSay('rec_info', { s: recDec(REC.samples[n - 1][0] - REC.samples[0][0]), v: recDec(P[P.length - 1][0]), c: cuts.length });
+}
 function recFraming(on) {                       // video framing (16:9 frame + Blender field of view) or back to the normal view
   recFrame.hidden = !on;
   if (!on) { camera.fov = REC.fov0; camera.updateProjectionMatrix(); return; }
@@ -2347,7 +2407,7 @@ function recUI() {
 }
 function recStart() {
   if (REC.play) recPlayStop();
-  REC.on = true; REC.t = 0; REC.next = 0; REC.samples = []; REC.mode = NAV.mode; anim = null;
+  REC.on = true; REC.t = 0; REC.next = 0; REC.samples = []; REC.proc = null; REC.mode = NAV.mode; anim = null;
   recFraming(true); recTime.textContent = '0:00'; recSay('rec_hint'); recUI();
 }
 function recStopRec() {
@@ -2366,11 +2426,12 @@ function recTick(dt) {                          // after the camera moved this f
 }
 function recPlayStart() {
   if (REC.samples.length < 2 || REC.on) return;
+  if (!REC.proc) recInfo();
   REC.play = { t: 0 }; anim = null; recFraming(true); recSay('rec_playing'); recUI();
 }
 const _ra = new THREE.Vector3(), _rb = new THREE.Vector3();
 function recPlayTick(dt) {
-  const S = REC.samples, P = REC.play; P.t += dt;
+  const S = REC.proc || REC.samples, P = REC.play; P.t += dt;
   const T_ = Math.min(P.t, S[S.length - 1][0]); let i = 1; while (i < S.length - 1 && S[i][0] < T_) i++;
   const a = S[i - 1], b = S[i], u = Math.max(0, Math.min(1, (T_ - a[0]) / ((b[0] - a[0]) || 1)));
   camera.position.set(a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u, a[3] + (b[3] - a[3]) * u);
@@ -2387,7 +2448,7 @@ function recPlayStop() {
 function recJSON() {
   const S = REC.samples;
   return JSON.stringify({ kind: 'fp3d-camera-recording', version: 1, project: PROJ.title || document.title, created: new Date().toISOString(),
-    units: 'scene metres: x east, y up, z south; t seconds; target = 3 m ahead', fov_v: Math.round(REC_VFOV * 10) / 10, aspect: '16:9', lens_mm: 22,
+    units: 'scene metres: x east, y up, z south; t seconds; target = 3 m ahead', fov_v: Math.round(REC_VFOV * 10) / 10, aspect: '16:9', lens_mm: REC_LENS,
     rate: REC_RATE, duration: S.length ? S[S.length - 1][0] : 0, samples: S });
 }
 recBtn.addEventListener('click', () => (REC.on ? recStopRec() : recStart()));
@@ -2414,7 +2475,7 @@ document.getElementById('rec-copy').addEventListener('click', async () => {
   try { const ta = document.createElement('textarea'); ta.value = txt; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select();
     const ok = document.execCommand('copy'); ta.remove(); recSay(ok ? 'rec_copied' : 'rec_copy_fail'); } catch (e) { recSay('rec_copy_fail'); }
 });
-document.getElementById('rec-clear').addEventListener('click', () => { REC.samples = []; try { localStorage.removeItem(REC_KEY); } catch (e) {} recSay('rec_hint'); recUI(); });
+document.getElementById('rec-clear').addEventListener('click', () => { REC.samples = []; REC.proc = null; try { localStorage.removeItem(REC_KEY); } catch (e) {} recSay('rec_hint'); recUI(); });
 addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input, textarea, select')) return;
   if (e.code === 'KeyR' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); REC.on ? recStopRec() : recStart(); }
@@ -2423,7 +2484,7 @@ addEventListener('keydown', e => {
 addEventListener('resize', () => { if (REC.on || REC.play) recFraming(true); });
 try { const s0 = JSON.parse(localStorage.getItem(REC_KEY) || 'null'); if (Array.isArray(s0) && s0.length > 1) { REC.samples = s0; recInfo(); } } catch (e) {}
 recUI();
-window.__rec = { REC, recStart, recStopRec, recPlayStart, recPlayStop, recJSON };
+window.__rec = { REC, recStart, recStopRec, recPlayStart, recPlayStop, recJSON, recTick, recProcess };
 
 // ---------- loop ----------
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }

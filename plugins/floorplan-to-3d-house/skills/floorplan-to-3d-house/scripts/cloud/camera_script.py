@@ -29,11 +29,15 @@ Steps (heading in degrees: 0 = east, 90 = south; "pivot" > 0 turns right):
   aerial     {"height": 40}    pull up and away until the whole house is seen from above
   hold       stay
   track      {"file": "export/recording.json"}  a camera path recorded in the 3D page (Record path button):
-             the camera follows it at the recorded timing. Options: "smooth" (s, default 0.5: moving average
-             over that window, removes keyboard and mouse jitter), "speed" (default 1; 0.5 = half speed),
-             "trim": [from_s, to_s] (keep part of it), "t" (seconds; default = recorded length / speed).
-             "keys": [[t, ex, ey, ez, tx, ty, tz], ...] instead of "file". Doors the camera crosses at walking
-             height open by themselves; glass, walls and eyes too close to a wall are listed in `checks`.
+             the camera follows it at the recorded timing, after the same processing as the page's Play:
+             pauses longer than "still_max" s (1.5) are cut down to "still_keep" s (0.4), still time at the start
+             and end to 0.2 s ("cut_stills": false keeps them); then Gaussian smoothing of the eye ("smooth",
+             sigma in s, default 0.35) and of the look direction ("smooth_look", 0.5); the ends ease in and out.
+             Also "speed" (default 1; 0.5 = half speed), "trim": [from_s, to_s] (on the raw recording),
+             "t" (seconds; default = processed length / speed), "lens" (mm; default the recording's, else 16).
+             "keys": [[t, ex, ey, ez, tx, ty, tz], ...] instead of "file". Doors crossed at walking height open by
+             themselves; walls crossed and eyes too close to a wall are listed in `checks` (glass is allowed: the
+             drone flies through every opening). The output gets "lens_mm" and "track_cuts" ([at s, removed s]).
 When a script has a "track" step and no "seconds", "t" values are seconds and the video lasts their sum.
 """
 import json, math, sys, argparse
@@ -48,6 +52,63 @@ FPS = int(SC.get('fps', 25))
 
 # ---------- recorded tracks (3D page "Record path" button) ----------
 import os, bisect
+def process_track(ts, E, Tg, s):
+    """Same processing as the 3D page's Play (engine.js recProcess): cut pauses, then Gaussian smoothing.
+    1. Pauses: an interval is still when the eye moves under `still_speed` m/s (0.08) and the view turns under
+       `still_turn` °/s (4). A still run longer than `still_max` s (1.5) is cut down to `still_keep` s (0.4);
+       still time at the very start and end is cut down to 0.2 s. `"cut_stills": false` keeps them.
+    2. Smoothing: Gaussian on the eye (sigma `smooth` s, default 0.35) and, separately, on the look direction
+       (sigma `smooth_look`, default 0.5: turns are steadier than moves). 0 = off."""
+    import math as m
+    n = len(ts); D = []
+    for e, g in zip(E, Tg):
+        d = (g[0] - e[0], g[1] - e[1], g[2] - e[2]); l = m.sqrt(sum(c * c for c in d)) or 1.0; D.append(tuple(c / l for c in d))
+    cuts = []
+    if s.get('cut_stills', True) and n > 2:
+        vmax, wmax = float(s.get('still_speed', 0.08)), float(s.get('still_turn', 4.0))
+        smax, keep = float(s.get('still_max', 1.5)), float(s.get('still_keep', 0.4))
+        still = []
+        for i in range(n - 1):
+            dt = (ts[i + 1] - ts[i]) or 1e-6
+            ang = m.degrees(m.acos(max(-1.0, min(1.0, sum(a * b for a, b in zip(D[i], D[i + 1]))))))
+            still.append(m.dist(E[i], E[i + 1]) / dt < vmax and ang / dt < wmax)
+        runs, i = [], 0
+        while i < n - 1:
+            if not still[i]: i += 1; continue
+            j = i
+            while j < n - 1 and still[j]: j += 1
+            runs.append((i, j)); i = j                    # intervals i0 .. i1-1 are still
+        scale = [1.0] * (n - 1)
+        for (i0, i1) in runs:
+            span = ts[i1] - ts[i0]
+            edge = i0 == 0 or i1 == n - 1
+            lim, kp = (0.2, 0.2) if edge else (smax, keep)
+            if span <= lim: continue
+            for k in range(i0, i1): scale[k] = kp / span    # the pause plays in kp seconds (the camera hardly moves)
+            cuts.append((round(ts[i0], 2), round(span - kp, 2)))
+        if cuts:
+            nt = [0.0]
+            for k in range(n - 1): nt.append(nt[-1] + (ts[k + 1] - ts[k]) * scale[k])
+            ts = nt
+    def gauss(arr0, sig, unit=False):
+        if sig <= 0: return arr0
+        pad = int(3 * sig / 0.1) + 1                     # hold the first and last pose beyond the ends: ease in and out
+        tp = [ts[0] - 0.1 * (pad - k) for k in range(pad)] + list(ts) + [ts[-1] + 0.1 * (k + 1) for k in range(pad)]
+        arr = [arr0[0]] * pad + list(arr0) + [arr0[-1]] * pad; N = len(tp)
+        cov = [max(1e-4, (tp[min(N - 1, j + 1)] - tp[max(0, j - 1)]) / 2) for j in range(N)]   # time each sample stands for (compressed pauses are dense)
+        out, lo, hi = [], 0, 0
+        for i in range(pad, pad + n):
+            t = tp[i]
+            while tp[lo] < t - 3 * sig: lo += 1
+            while hi + 1 < N and tp[hi + 1] <= t + 3 * sig: hi += 1
+            ws = [m.exp(-0.5 * ((tp[j] - t) / sig) ** 2) * cov[j] for j in range(lo, hi + 1)]; W = sum(ws)
+            v = [sum(ws[j - lo] * arr[j][k] for j in range(lo, hi + 1)) / W for k in range(3)]
+            if unit: l = m.sqrt(sum(c * c for c in v)) or 1.0; v = [c / l for c in v]
+            out.append(tuple(v))
+        return out
+    E = gauss(E, float(s.get('smooth', 0.35))); D = gauss(D, float(s.get('smooth_look', 0.5)), unit=True)
+    Tg = [(e[0] + d[0] * 3, e[1] + d[1] * 3, e[2] + d[2] * 3) for e, d in zip(E, D)]
+    return ts, E, Tg, cuts
 def load_track(s):
     if 'keys' in s: R = s['keys']
     else:
@@ -56,6 +117,7 @@ def load_track(s):
         f = next((c for c in cand if os.path.exists(c)), None)
         if not f: sys.exit(f"track: recording not found: {s['file']!r}")
         R = json.load(open(f, encoding='utf-8'))
+    R_meta = R if isinstance(R, dict) else None
     if isinstance(R, dict):
         if R.get('kind') not in (None, 'fp3d-camera-recording'): sys.exit(f"track: not a camera recording (kind {R.get('kind')!r})")
         R = R.get('samples') or []
@@ -67,22 +129,14 @@ def load_track(s):
     for t, e, g in S_:
         if ts and t - t0 <= ts[-1] + 1e-4: continue          # duplicate times
         ts.append(t - t0); E.append(e); Tg.append(g)
-    w = float(s.get('smooth', 0.5)) / 2
-    if w > 0:                                                 # time-window moving average (eye and look point separately)
-        def sm(arr):
-            out, lo, hi = [], 0, 0
-            for i, t in enumerate(ts):
-                while ts[lo] < t - w: lo += 1
-                while hi + 1 < len(ts) and ts[hi + 1] <= t + w: hi += 1
-                n = hi - lo + 1; out.append(tuple(sum(arr[j][k] for j in range(lo, hi + 1)) / n for k in range(3)))
-            out[0], out[-1] = arr[0], arr[-1]                   # keep the exact start and end
-            return out
-        E, Tg = sm(E), sm(Tg)
-    return dict(ts=ts, E=E, T=Tg, dur=ts[-1] / float(s.get('speed', 1.0)))
+    lens = float(s.get('lens', (R_meta.get('lens_mm') if R_meta else None) or 16))
+    ts, E, Tg, cuts = process_track(ts, E, Tg, s)
+    return dict(ts=ts, E=E, T=Tg, dur=ts[-1] / float(s.get('speed', 1.0)), lens=lens, cuts=cuts)
 TRK = {}
 for s_ in SC['steps']:
     if s_.get('do') == 'track':
         TRK[id(s_)] = load_track(s_); s_.setdefault('t', TRK[id(s_)]['dur'])
+LENS = next((v['lens'] for v in TRK.values()), None)
 SEC = float(SC.get('seconds', sum(s_.get('t', 1.0) for s_ in SC['steps']) if TRK else 60)); F = int(round(SEC * FPS))
 EYE, LOOKD = A.eye, 0.25                    # eye above the floor; look slightly down (m per m)
 
@@ -384,8 +438,6 @@ for s in steps:
                     dst = room_at(q) or room_at(lerp(p, q, min(1, v + 0.3)))
                     tow = side(op, dst, 2.0) if dst in op['r'] else q
                     doors.append((len(segs) - 1, u_t, op, tow))
-                elif op['kind'] in ('slide', 'door_glass', 'window'):
-                    checks.append(f"step {len(labels)}: passes through glass at {ts[i] / tN * dur:.1f} s ({op['kind']} {op['w']} m at x {op['c'][0]:.1f}, z {op['c'][1]:.1f})")
             if ey - fy < 2.6:
                 for (wa, wb, t) in WALLS:
                     if cross(p, q, wa, wb) is not None and min(seg_d(p, wa, wb), seg_d(q, wa, wb)) > 0.01:
@@ -430,6 +482,8 @@ for si, lab in labels:
     if si >= len(segs): continue
     e, _ = sample(starts[si] + segs[si][0]); STOPS.append(dict(n=len(STOPS) + 1, label=lab, frame=int(starts[si] * FPS) + 1, pos=[round(e[0], 2), round(e[2], 2)]))   # marker where the step ends
 out = dict(camera_keys=keys, frames_src=F, frames_out=F, doors=DOORS, stops=STOPS, checks=checks, mode='record' if TRK and len(TRK) == len(SC['steps']) else 'script', seconds=SEC)
+if LENS: out['lens_mm'] = LENS               # recorded paths: the lens they were framed with (setup.py DroneCam)
+if TRK: out['track_cuts'] = [c for v in TRK.values() for c in v['cuts']]   # pauses cut: [recording time s, seconds removed]
 json.dump(out, open(A.out, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
 print(json.dumps(dict(frames=F, keys=len(keys), doors=len(DOORS), stops=[f"{s['n']} {s['label']} ({s['frame'] / FPS:.1f} s)" for s in STOPS], checks=checks), ensure_ascii=False))
 

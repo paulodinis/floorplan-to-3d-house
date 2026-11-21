@@ -149,7 +149,8 @@ scene.render.film_transparent = False
 # ---------- drone camera ----------
 for o in list(bpy.data.objects):
     if o.type == 'CAMERA': bpy.data.objects.remove(o)
-cam_d = bpy.data.cameras.new('DroneCam'); cam_d.lens = 22; cam_d.sensor_width = 36; cam_d.clip_end = 1500
+cam_d = bpy.data.cameras.new('DroneCam'); cam_d.lens = float(P.get('lens_mm') or 22);   # 16 mm for paths recorded in the 3D page (camera.json lens_mm)
+cam_d.sensor_width = 36; cam_d.clip_end = 1500
 cam = bpy.data.objects.new('DroneCam', cam_d); lights_c.objects.link(cam); scene.camera = cam
 tgt = bpy.data.objects.get('DroneTarget') or bpy.data.objects.new('DroneTarget', None);
 if tgt.name not in lights_c.objects: lights_c.objects.link(tgt)
