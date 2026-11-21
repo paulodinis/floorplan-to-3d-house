@@ -92,7 +92,13 @@
   "rec_live": "REC",
   "rec_dl_off": "Download is not available in this view: use Copy and paste it into the conversation.",
   "rec_dl_declined": "Download cancelled.",
-  "rec_dl_busy": "A download is already waiting for your answer."
+  "rec_dl_busy": "A download is already waiting for your answer.",
+  "sd_rise": "sunrise",
+  "sd_set": "sunset",
+  "sd_alt": "sun at {a}°",
+  "sd_below": "sun below the horizon",
+  "sd_polar": "no sunrise today",
+  "sd_midsun": "sun all day"
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -187,6 +193,12 @@
   "rec_live": "REC",
   "rec_dl_off": "Descarregar não está disponível nesta vista: use Copiar e cole na conversa.",
   "rec_dl_declined": "Descarga cancelada.",
-  "rec_dl_busy": "Já há uma descarga à espera da sua resposta."
+  "rec_dl_busy": "Já há uma descarga à espera da sua resposta.",
+  "sd_rise": "nascer do sol",
+  "sd_set": "pôr do sol",
+  "sd_alt": "sol a {a}°",
+  "sd_below": "sol abaixo do horizonte",
+  "sd_polar": "o sol não nasce",
+  "sd_midsun": "sol todo o dia"
  }
 }

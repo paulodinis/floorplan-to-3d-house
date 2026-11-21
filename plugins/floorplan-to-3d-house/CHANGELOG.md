@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.12.1 (2026-11-21)
+- **Sun dial** replaces the time slider in the 3D page: solar time on an arc from 4:00 (left) to 23:00 (right) over the top, like the sun's path. The stretch between sunrise and sunset is drawn in a warm gradient and the night in blue; sunrise and sunset are marked on the arc (notch + half-sun icon with an arrow) and their times shown below, computed for the chosen date (21 Jun / 21 Mar / 21 Dec) and the site latitude (sun centre 0.833° below the horizon). Drag the sun (a moon at night) along the arc, or use the keyboard (arrows 15 min, Page Up/Down 1 h, Home/End); the centre shows the time and the sun's height. Works with touch; `role="slider"` with a spoken value. English and Portuguese (Portugal). `project.json` `"sun_hour"` is now clamped to 4–23.
+
 ## 1.12.0 (2026-11-21)
 - **Record the video path in the 3D page**: **● Record path** in the navigation section (or the `R` key) records the camera while the user flies (Drone) or walks (Walk). During the recording the view uses the video framing: a 16:9 frame and the field of view of a **16 mm** lens, so what the user sees is what the video shows; a red REC pill shows the time and a Stop button. **▶ Play** replays the path as the video will move (smoothed, pauses cut) and the panel shows *recorded → video length*. **Download** saves `camera_recording_<date>.json`, **Copy** puts it on the clipboard. The last recording is kept in the browser. English and Portuguese (Portugal).
   - In a claude.ai artifact a page cannot download by itself: **Download** asks the viewer through the artifact `downloads` capability, which the publish step now declares (`references/exports.md`). Outside claude.ai it is a plain download.
