@@ -1899,7 +1899,7 @@ function updateLabels() {
 const toRad = d => d * Math.PI / 180;
 const north = new THREE.Vector3(Math.sin(toRad(NORTH_DEG)), 0, -Math.cos(toRad(NORTH_DEG)));
 const east = new THREE.Vector3(Math.cos(toRad(NORTH_DEG)), 0, Math.sin(toRad(NORTH_DEG)));
-let dec = 23.44, hour = PROJ.sun_hour ?? 15.5;   // default 15:30: low sun on the facades, long readable shadows (project.json "sun_hour")
+let dec = 23.44, hour = Math.max(4, Math.min(23, PROJ.sun_hour ?? 15.5));   // default 15:30: low sun on the facades, long readable shadows (project.json "sun_hour")
 const target = new THREE.Vector3(2, 0, 0);
 function updateSun() {
   const phi = toRad(LAT), d = toRad(dec), H = toRad(15 * (hour - 12));
@@ -1908,7 +1908,7 @@ function updateSun() {
   const dir = north.clone().multiplyScalar(Math.cos(az)).add(east.clone().multiplyScalar(Math.sin(az))).multiplyScalar(Math.cos(alt)).setY(Math.max(sinAlt, 0.02)).normalize();
   sun.position.copy(target).addScaledVector(dir, 120); sun.target.position.copy(target);
   const up = Math.max(0, Math.min(1, sinAlt * 2.2));
-  const night = Math.max(0, Math.min(1, (0.03 - sinAlt) / 0.15));      // 0 by day, 1 after dusk: moonlight, dark sky, lamps (slider goes to 24:00)
+  const night = Math.max(0, Math.min(1, (0.03 - sinAlt) / 0.15));      // 0 by day, 1 after dusk: moonlight, dark sky, lamps (the dial runs 4:00-23:00)
   sun.intensity = (0.15 + 2.5 * up) * (1 - night) + 0.4 * night;
   sun.color.setHSL(0.085, 0.75 - 0.45 * up, 0.58 + 0.3 * up).lerp(new THREE.Color(0x9fb3e6), night);
   hemi.intensity = (0.2 + 0.4 * up) * (1 - night) + 0.18 * night;
@@ -1987,13 +1987,81 @@ document.getElementById('t-plan').addEventListener('change', e => { groundU.plan
 document.getElementById('t-terrain').addEventListener('change', e => { relief = e.target.checked; applyHeights(); placeTrees(); });
 document.querySelectorAll('.dseg button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.dseg button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
-  dec = parseFloat(b.dataset.dec); updateSun();
+  dec = parseFloat(b.dataset.dec); updateSun(); sdRender();
 }));
-const hourIn = document.getElementById('hour'), hourOut = document.getElementById('hour-out');
-hourIn.value = String(hour);
-const fmtH = h => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-hourIn.addEventListener('input', () => { hour = parseFloat(hourIn.value); hourOut.textContent = fmtH(hour); updateSun(); });
-hourOut.textContent = fmtH(hour);
+
+// ---------- sun dial: solar time on an arc, 4:00 (left) to 23:00 (right) over the top; the warm stretch runs from
+// sunrise to sunset for the chosen date and the site latitude (sun centre 0.833° below the horizon: refraction + radius)
+const fmtH = h => { const m = Math.round(h * 60); return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+const SD = { h0: 4, h1: 23, cx: 130, cy: 120, r: 98 }, sdEl = document.getElementById('sd'), SVGNS = 'http://www.w3.org/2000/svg';
+const sdAng = h => Math.PI * (1 - (h - SD.h0) / (SD.h1 - SD.h0));
+const sdPt = (h, r = SD.r) => [SD.cx + r * Math.cos(sdAng(h)), SD.cy - r * Math.sin(sdAng(h))];
+const sdArc = (a, b, r = SD.r) => { const [x1, y1] = sdPt(a, r), [x2, y2] = sdPt(b, r); return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`; };
+function sunTimes() {                                         // [sunrise, sunset] in solar hours, or 'polar' / 'midnight'
+  const phi = toRad(LAT), d = toRad(dec), c = (Math.sin(toRad(-0.833)) - Math.sin(phi) * Math.sin(d)) / (Math.cos(phi) * Math.cos(d));
+  if (c >= 1) return 'polar'; if (c <= -1) return 'midnight';
+  const H0 = Math.acos(c) * 12 / Math.PI; return [12 - H0, 12 + H0];
+}
+const sunAlt = h => { const phi = toRad(LAT), d = toRad(dec), H = toRad(15 * (h - 12)); return Math.asin(Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(H)) * 180 / Math.PI; };
+function sdIcon(h, up) {                                      // half sun on a horizon line with an arrow, just outside the arc
+  const [x, y] = sdPt(h, SD.r + 17), a = up ? -1 : 1;
+  return `<g class="sd-mark" fill="none" stroke-width="1.4" stroke-linecap="round" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+    <path d="M-7 3H7"/><path d="M-4 3A4 4 0 0 1 4 3" fill="#f3b33d" stroke="#d9822b"/>
+    <path d="M0 ${up ? -2.5 : -8.5}V${up ? -9 : -3}M-2.5 ${up ? -6.5 : -5.5}L0 ${up ? -9 : -3}L2.5 ${up ? -6.5 : -5.5}"/></g>`;
+}
+function sdRender() {
+  const st = sunTimes(), alt = sunAlt(hour), day = alt > -0.833;
+  let h = `<defs><linearGradient id="sd-day" gradientUnits="userSpaceOnUse" x1="${SD.cx - SD.r}" y1="0" x2="${SD.cx + SD.r}" y2="0">`;
+  const [ra, sa] = Array.isArray(st) ? st : st === 'midnight' ? [SD.h0, SD.h1] : [12, 12];
+  const gx = v => ((sdPt(Math.max(SD.h0, Math.min(SD.h1, v)))[0] - (SD.cx - SD.r)) / (2 * SD.r)).toFixed(3);
+  h += `<stop offset="${gx(ra)}" stop-color="#e8743b"/><stop offset="${gx((ra + sa) / 2)}" stop-color="#f8d24c"/><stop offset="${gx(sa)}" stop-color="#e8743b"/></linearGradient>
+    <radialGradient id="sd-glow"><stop offset="0" stop-color="#ffd54a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd54a" stop-opacity="0"/></radialGradient></defs>`;
+  h += `<path class="sd-night" d="${sdArc(SD.h0, SD.h1)}" fill="none" stroke-width="9" stroke-linecap="round" opacity=".8"/>`;
+  if (st !== 'polar') h += `<path d="${sdArc(Math.max(SD.h0, ra), Math.min(SD.h1, sa))}" fill="none" stroke="url(#sd-day)" stroke-width="9"/>`;
+  for (let k = SD.h0; k <= SD.h1; k++) {                     // hour ticks inside the arc, labels every 2 h
+    const [x1, y1] = sdPt(k, SD.r - 8), [x2, y2] = sdPt(k, SD.r - (k % 2 ? 11 : 14));
+    h += `<line class="sd-tick" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width="${k % 2 ? 0.8 : 1.2}"/>`;
+    if (k % 2 === 0) { const [lx, ly] = sdPt(k, SD.r - 23); h += `<text class="sd-hl" x="${lx.toFixed(1)}" y="${(ly + 3.3).toFixed(1)}" text-anchor="middle">${k}</text>`; }
+  }
+  if (Array.isArray(st)) {                                    // sunrise / sunset: notch across the arc + icon outside it
+    for (const [v, up] of [[st[0], true], [st[1], false]]) if (v > SD.h0 && v < SD.h1) {
+      const [x1, y1] = sdPt(v, SD.r - 6), [x2, y2] = sdPt(v, SD.r + 6);
+      h += `<line class="sd-mark" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke-width="1.6"/>` + sdIcon(v, up);
+    }
+    h += `<text class="sd-rsl" x="4" y="138">${T.sd_rise}</text><text class="sd-rs" x="4" y="150">↑ ${fmtH(st[0])}</text>`;
+    h += `<text class="sd-rsl" x="256" y="138" text-anchor="end">${T.sd_set}</text><text class="sd-rs" x="256" y="150" text-anchor="end">${fmtH(st[1])} ↓</text>`;
+  } else h += `<text class="sd-rsl" x="${SD.cx}" y="150" text-anchor="middle">${st === 'polar' ? T.sd_polar : T.sd_midsun}</text>`;
+  h += `<text class="sd-time" x="${SD.cx}" y="${SD.cy - 26}" text-anchor="middle">${fmtH(hour)}</text>`;
+  h += `<text class="sd-cap" x="${SD.cx}" y="${SD.cy - 9}" text-anchor="middle">${T.aria_hour}</text>`;
+  h += `<text class="sd-alt" x="${SD.cx}" y="${SD.cy + 7}" text-anchor="middle">${day ? (T.sd_alt || '').replace('{a}', Math.max(0, Math.round(alt))) : T.sd_below}</text>`;
+  const [kx, ky] = sdPt(hour);                                // the sun (or the moon at night) on the arc
+  h += `<g class="sd-knob" transform="translate(${kx.toFixed(1)} ${ky.toFixed(1)})">`;
+  if (day) {
+    h += `<circle r="17" fill="url(#sd-glow)"/>`;
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; h += `<line x1="${(Math.cos(a) * 10).toFixed(1)}" y1="${(Math.sin(a) * 10).toFixed(1)}" x2="${(Math.cos(a) * 13.5).toFixed(1)}" y2="${(Math.sin(a) * 13.5).toFixed(1)}" stroke="#e8a021" stroke-width="1.6" stroke-linecap="round"/>`; }
+    h += `<circle r="7.5" fill="#ffd54a" stroke="#e8a021" stroke-width="1.5"/>`;
+  } else h += `<circle r="8" fill="#dfe6f6" stroke="#8d9cc2" stroke-width="1.5"/><circle r="6.5" cx="3.5" cy="-2.5" fill="#3d4a6b" opacity=".9"/>`;
+  h += `</g>`;
+  sdEl.innerHTML = h;
+  sdEl.setAttribute('aria-valuenow', String(hour)); sdEl.setAttribute('aria-valuetext', `${fmtH(hour)}, ${day ? (T.sd_alt || '').replace('{a}', Math.max(0, Math.round(alt))) : T.sd_below}`);
+}
+function sdSet(h) { const v = Math.max(SD.h0, Math.min(SD.h1, Math.round(h * 4) / 4)); if (v === hour) return; hour = v; updateSun(); sdRender(); }
+function sdFromPointer(e) {
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(sdEl.getScreenCTM().inverse());
+  let a = Math.atan2(SD.cy - p.y, p.x - SD.cx); if (a < 0) a = p.x < SD.cx ? Math.PI : 0;
+  sdSet(SD.h0 + (1 - a / Math.PI) * (SD.h1 - SD.h0));
+}
+sdEl.addEventListener('pointerdown', e => { sdEl.setPointerCapture(e.pointerId); sdEl.classList.add('drag'); sdFromPointer(e); e.preventDefault(); });
+sdEl.addEventListener('pointermove', e => { if (sdEl.hasPointerCapture(e.pointerId)) sdFromPointer(e); });
+const sdEnd = e => { sdEl.classList.remove('drag'); if (sdEl.hasPointerCapture(e.pointerId)) sdEl.releasePointerCapture(e.pointerId); };
+sdEl.addEventListener('pointerup', sdEnd); sdEl.addEventListener('pointercancel', sdEnd);
+sdEl.addEventListener('keydown', e => {
+  const step = { ArrowLeft: -0.25, ArrowDown: -0.25, ArrowRight: 0.25, ArrowUp: 0.25, PageDown: -1, PageUp: 1 }[e.key];
+  if (step !== undefined) sdSet(hour + step); else if (e.key === 'Home') sdSet(SD.h0); else if (e.key === 'End') sdSet(SD.h1); else return;
+  e.preventDefault(); e.stopPropagation();
+});
+window.__sun = { set: h => sdSet(h), get: () => hour, times: sunTimes };
+sdRender();
 const panel = document.getElementById('panel'), tp = document.getElementById('toggle-panel');
 tp.addEventListener('click', () => {
   const c = panel.classList.toggle('collapsed');
