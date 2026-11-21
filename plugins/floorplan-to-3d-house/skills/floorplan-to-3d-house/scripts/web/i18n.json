@@ -89,7 +89,10 @@
   "rec_too_short": "Too short (under 2 s): record again.",
   "rec_playing": "Playing the path… (Esc stops)",
   "h_rec": "record",
-  "rec_live": "REC"
+  "rec_live": "REC",
+  "rec_dl_off": "Download is not available in this view: use Copy and paste it into the conversation.",
+  "rec_dl_declined": "Download cancelled.",
+  "rec_dl_busy": "A download is already waiting for your answer."
  },
  "pt-PT": {
   "page_title": "{title} 3D",
@@ -181,6 +184,9 @@
   "rec_too_short": "Demasiado curto (menos de 2 s): grave de novo.",
   "rec_playing": "A rever o percurso… (Esc para parar)",
   "h_rec": "gravar",
-  "rec_live": "REC"
+  "rec_live": "REC",
+  "rec_dl_off": "Descarregar não está disponível nesta vista: use Copiar e cole na conversa.",
+  "rec_dl_declined": "Descarga cancelada.",
+  "rec_dl_busy": "Já há uma descarga à espera da sua resposta."
  }
 }

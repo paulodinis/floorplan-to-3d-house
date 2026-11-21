@@ -2393,8 +2393,18 @@ function recJSON() {
 recBtn.addEventListener('click', () => (REC.on ? recStopRec() : recStart()));
 document.getElementById('rec-stop').addEventListener('click', recStopRec);
 recPlayB.addEventListener('click', () => (REC.play ? recPlayStop() : recPlayStart()));
-document.getElementById('rec-save').addEventListener('click', () => {
+// Download: inside a claude.ai artifact a page may not download by itself; it asks the viewer through the `downloads`
+// capability (declared when the page is published, see references/exports.md). Elsewhere (a local file, another host) a plain link.
+let recDL = null; const inClaude = !!(window.claude && window.claude.use);
+if (inClaude) window.claude.use('downloads').then(d => { recDL = d; }).catch(() => {});
+document.getElementById('rec-save').addEventListener('click', async () => {
   const f = `camera_recording_${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '_')}.json`;
+  if (recDL) {
+    try { await recDL.save({ filename: f, data: recJSON() }); recSay('rec_saved', { f }); }
+    catch (e) { recSay(e && e.code === 'declined' ? 'rec_dl_declined' : e && e.code === 'rate_limited' ? 'rec_dl_busy' : 'rec_dl_off'); }
+    return;
+  }
+  if (inClaude) { recSay('rec_dl_off'); return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([recJSON()], { type: 'application/json' })); a.download = f;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); recSay('rec_saved', { f });
 });
